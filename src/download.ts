@@ -14,6 +14,7 @@ export async function downloadImages(
     dir = "dist/images",
     concurrency = 3,
     optimize = true,
+    overwrite = false,
     debug = false,
     onDownloaded: onSave = (_imageUrl, localDest, buffer, _optimized) => {
       return fs.promises.writeFile(localDest, buffer);
@@ -22,6 +23,7 @@ export async function downloadImages(
     dir?: string;
     concurrency?: number;
     optimize?: boolean;
+    overwrite?: boolean;
     debug?: boolean;
     onDownloaded?: (imageUrl: string, localDest: string, buffer: Buffer<ArrayBufferLike>, optimized: boolean) => Promise<void>;
   } = {}
@@ -36,8 +38,8 @@ export async function downloadImages(
       const localName = path.basename(localUrl);
       const localDest = path.join(dir, localName);
 
-      if (debug && await fs.promises.stat(localDest).catch(() => null)) {
-        console.log(`astrotion: image: download skipped: ${imageUrl} -> ${localDest}`);
+      if (!overwrite && await fs.promises.stat(localDest).catch(() => null)) {
+        if (debug) console.log(`astrotion: image: download skipped: ${imageUrl} -> ${localDest}`);
         return;
       }
 

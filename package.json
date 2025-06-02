@@ -19,6 +19,7 @@
     "test": "vitest",
     "build": "tsup",
     "dev": "tsx src/cli.ts",
+    "dev:ts": "node src/cli.ts",
     "start": "node dist/cli.js",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit"
@@ -36,9 +37,6 @@
     "url": "https://github.com/rot1024/astrotion/issues"
   },
   "homepage": "https://github.com/rot1024/astrotion#readme",
-  "engine": {
-    "node": ">=23.6.0"
-  },
   "dependencies": {
     "@microflash/rehype-figure": "^2.1.4",
     "@notionhq/client": "^3.1.3",

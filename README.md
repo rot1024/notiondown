@@ -19,7 +19,7 @@ Options:
   --imagedir <path>  image directory (default: "images")
   --cachedir <path>  cache directory (default: "cache")
   --cache            enable cache (default: true)
-  --download-images  download images (default: true)
+  --download-images  download images. If "always" is specified, overwrites existing images. (default: true)
   --optimize-images  convert images to WebP (default: true)
   --debug            enable debug mode (default: false)
   -h, --help         display help for command

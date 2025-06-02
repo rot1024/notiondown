@@ -17,7 +17,7 @@ program
   .option("--imagedir <path>", "image directory", "images")
   .option("--cachedir <path>", "cache directory", "cache")
   .option("--cache", "enable cache", true)
-  .option("--download-images", "download images", true)
+  .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
   .option("--debug", "enable debug mode", false);
 
@@ -48,22 +48,22 @@ async function main() {
   for (const post of posts) {
     delete post.images;
   }
-  const meta = {
-    database,
-    posts
-  };
+  const meta = { database, posts };
   const metaFilePath = join(options.output, "meta.json");
   writeFileSync(metaFilePath, JSON.stringify(meta, null, 2), "utf-8");
   console.log(`Saved meta data to ${metaFilePath}`);
 
   // download images
-  console.log(`Found ${images.size} images to download`);
-  await downloadImages(images, {
-    dir: imageDownloadDir,
-    concurrency: options.concurrency,
-    optimize: options.optimizeImages,
-    debug: options.debug,
-  });
+  if (options.downloadImages && images.size > 0) {
+    console.log(`Found ${images.size} images to download`);
+    await downloadImages(images, {
+      dir: imageDownloadDir,
+      concurrency: options.concurrency,
+      optimize: options.optimizeImages,
+      debug: options.debug,
+      overwrite: options.downloadImages === "always",
+    });
+  }
 
   // save posts as markdown and HTML files
   for (const post of posts) {
@@ -88,6 +88,7 @@ async function main() {
         concurrency: options.concurrency,
         optimize: options.optimizeImages,
         debug: options.debug,
+        overwrite: options.downloadImages === "always",
       });
     }
 
