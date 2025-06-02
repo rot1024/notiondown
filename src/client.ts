@@ -156,7 +156,7 @@ export class Client implements ClientType {
       }),
     );
 
-    const posts = results.filter(isValidPage).map(buildPost);
+    const posts = results.filter(isValidPage).map(p => buildPost(p, this.imageDir));
     return posts;
   }
 

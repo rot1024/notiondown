@@ -49,24 +49,25 @@ export function isValidPage(
   );
 }
 
-export function buildPost(pageObject: PageObjectResponse): Post {
+export function buildPost(pageObject: PageObjectResponse, dir?: string): Post {
   const { properties, id, icon, cover } = pageObject;
   const { url: iconUrl } = getUrlFromIconAndCover(icon) ?? {};
   const { url: coverUrl } = getUrlFromIconAndCover(cover) ?? {};
   const { url: featuredImageUrl } =
     getUrlFromIconAndCover(properties.FeaturedImage) ?? {};
-  const iconAssetUrl = fileUrlToAssetUrl(iconUrl, id + "_icon");
-  const coverAssetUrl = fileUrlToAssetUrl(coverUrl, id + "_cover");
+  const iconAssetUrl = fileUrlToAssetUrl(iconUrl, id + "_icon", dir);
+  const coverAssetUrl = fileUrlToAssetUrl(coverUrl, id + "_cover", dir);
   const featuredImageAssetUrl = fileUrlToAssetUrl(
     featuredImageUrl,
     id + "_featured",
+    dir,
   );
 
-  const images = new Map<string, string>();
-  if (iconUrl && iconAssetUrl) images.set(iconUrl, iconAssetUrl);
-  if (coverUrl && coverAssetUrl) images.set(coverUrl, coverAssetUrl);
+  const images: Record<string, string> = {};
+  if (iconUrl && iconAssetUrl) images[iconUrl] = iconAssetUrl;
+  if (coverUrl && coverAssetUrl) images[coverUrl] = coverAssetUrl;
   if (featuredImageUrl && featuredImageAssetUrl)
-    images.set(featuredImageUrl, featuredImageAssetUrl);
+    images[featuredImageUrl] = featuredImageAssetUrl;
 
   const post: Post = {
     id: id,

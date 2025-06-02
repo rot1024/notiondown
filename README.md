@@ -16,7 +16,7 @@ Options:
   --auth <key>       Notion API key
   --db <id>          Notion database ID
   --output <path>    output directory (default: "dist")
-  --imagedir <path>  image download directory (default: "images")
+  --imagedir <path>  image directory (default: "images")
   --cachedir <path>  cache directory (default: "cache")
   --cache            enable cache (default: true)
   --download-images  download images (default: true)

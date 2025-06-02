@@ -27,7 +27,7 @@ export type Post = {
   icon?: string;
   cover?: string;
   featuredImage?: string;
-  images?: Map<string, string>;
+  images?: Record<string, string>;
 };
 
 export type PostContent = {

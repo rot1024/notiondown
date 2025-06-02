@@ -3,7 +3,7 @@
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { Command } from "commander";
-import { Client, downloadImagesWithRetry } from "./index.ts";
+import { Client, downloadImages, downloadImagesWithRetry } from "./index.ts";
 
 const program = new Command();
 
@@ -14,7 +14,7 @@ program
   .requiredOption("--auth <key>", "Notion API key")
   .requiredOption("--db <id>", "Notion database ID")
   .option("--output <path>", "output directory", "dist")
-  .option("--imagedir <path>", "image download directory", "images")
+  .option("--imagedir <path>", "image directory", "images")
   .option("--cachedir <path>", "cache directory", "cache")
   .option("--cache", "enable cache", true)
   .option("--download-images", "download images", true)
@@ -46,6 +46,32 @@ async function main() {
   console.log(`Found ${posts.length} posts`);
 
   mkdirSync(options.output, { recursive: true });
+
+  // download images
+  const images = new Map<string, string>();
+  if (database.images) {
+    for (const [url, assetUrl] of database.images.entries()) {
+      images.set(url, assetUrl);
+    }
+    delete database.images; // remove images from database to clean up the meta.json
+  }
+
+  for (const post of posts) {
+    if (post.images) {
+      for (const [url, assetUrl] of Object.entries(post.images)) {
+        images.set(url, assetUrl);
+      }
+      delete post.images; // remove images from post to clean up the meta.json
+    }
+  }
+
+  console.log(`Found ${images.size} images to download`);
+  await downloadImages(images, {
+    dir: imageDownloadDir,
+    concurrency: options.concurrency,
+    optimize: options.optimizeImages,
+    debug: options.debug,
+  });
 
   // save meta.json
   const meta = {

@@ -1,6 +1,7 @@
 {
   "name": "astrotion",
   "version": "0.1.0",
+  "description": "A CLI tool and library to convert Notion pages to markdown and HTML with caching.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
