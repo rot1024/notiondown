@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { writeFileSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
+import { join } from "path";
 import { Command } from "commander";
-import { Client } from "./index.ts";
+import { Client, downloadImages } from "./index.ts";
 
 const program = new Command();
 
@@ -14,20 +14,22 @@ program
   .requiredOption("--api <key>", "Notion API key")
   .requiredOption("--db <id>", "Notion database ID")
   .option("--output <path>", "output directory", "dist")
-  .option("--cache <path>", "cache directory (use 'false' to disable)", "cache")
-  .option("--download-images", "automatically download and cache images", true)
-  .option("--no-download-images", "disable image downloading")
-  .option("--optimize-images", "convert images to WebP", true)
-  .option("--no-optimize-images", "disable image optimization");
+  .option("--imagedir <path>", "image download directory", "images")
+  .option("--cachedir <path>", "cache directory", "cache")
+  .option("--cache", "enable cache", true)
+  .option("--download-images", "download images", true)
+  .option("--optimize-images", "convert images to WebP", true);
 
 async function main() {
   program.parse();
   const options = program.opts();
+  const imageDownloadDir = join(options.output, options.imagedir);
 
-  const client = new Client(options.db, {
+  const client = new Client({
+    databaseId: options.db,
     auth: options.api,
-    cacheDir: options.cache === "false" ? undefined : options.cache,
-    downloadImages: options.downloadImages,
+    cacheDir: options.cache ? options.cachedir : undefined,
+    imageDir: options.imagedir,
   });
 
   console.log("Loading cache...");
@@ -45,15 +47,26 @@ async function main() {
 
   for (const post of posts) {
     console.log(`Processing: ${post.title}`);
-    
+
     const content = await client.getPostContent(post.id);
-    const filename = `${post.slug}.md`;
-    const filepath = join(options.output, filename);
-    
-    mkdirSync(dirname(filepath), { recursive: true });
-    writeFileSync(filepath, content.markdown, "utf-8");
-    
-    console.log(`Saved: ${filepath}`);
+
+    const filenameMd = `${post.slug}.md`;
+    const filepathMd = join(options.output, filenameMd);
+    writeFileSync(filepathMd, content.markdown, "utf-8");
+
+    const filenameHtml = `${post.slug}.html`;
+    const filepathHtml = join(options.output, filenameHtml);
+    writeFileSync(filepathHtml, content.html, "utf-8");
+
+    if (options.downloadImages && options.imagedir && content.images) {
+      await downloadImages(content.images, {
+        dir: imageDownloadDir,
+        concurrency: options.concurrency,
+        optimize: options.optimizeImages,
+      });
+    }
+
+    console.log(`Saved: ${filepathMd}`);
   }
 
   console.log("Done!");

@@ -7,10 +7,11 @@ export function transform(
   blocks: MdBlock[],
   posts: Post[],
   images: Map<string, string>,
+  imageDir?: string,
 ): MdBlock[] {
   return transformMdBlocks(
     blocks,
-    (block) => transformMdImageBlock(block, images),
+    (block) => transformMdImageBlock(block, images, imageDir),
     (block) => transformMdLinkBlock(block, posts),
   );
 }
@@ -35,6 +36,7 @@ function transformMdBlocks(
 function transformMdImageBlock(
   block: MdBlock,
   imageUrls: Map<string, string>,
+  imageDir?: string,
 ): MdBlock {
   if (block.type !== "image") return block;
 
@@ -42,7 +44,7 @@ function transformMdImageBlock(
 
   const imageUrl = imageMarkdown.match(/!\[.*?\]\((.+)\)/s)?.[1];
   if (imageUrl) {
-    const newUrl = fileUrlToAssetUrl(imageUrl, block.blockId);
+    const newUrl = fileUrlToAssetUrl(imageUrl, block.blockId, imageDir);
 
     if (newUrl && newUrl !== imageUrl) {
       imageUrls.set(imageUrl, newUrl);

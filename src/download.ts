@@ -4,29 +4,42 @@ import path from "node:path";
 import { PromisePool } from "@supercharge/promise-pool";
 import sharp from "sharp";
 
-import { debug, mergeMaps } from "./utils.ts";
-
-const downloadConrurrency = 3;
-
 export async function downloadImages(
-  images: (Map<string, string> | undefined)[],
-  options: { cacheDir: string; concurrency?: number; },
+  images: Map<string, string> | null | undefined,
+  {
+    dir = "dist/images",
+    concurrency = 3,
+    optimize = true,
+    debug = false,
+    onDownloaded = (_imageUrl, localDest, buffer, _optimized) => {
+      return fs.promises.writeFile(localDest, buffer);
+    }
+  }: {
+    dir?: string;
+    concurrency?: number;
+    optimize?: boolean;
+    debug?: boolean;
+    onDownloaded?: (imageUrl: string, localDest: string, buffer: Buffer<ArrayBufferLike>, optimized: boolean) => Promise<void>;
+  } = {}
 ): Promise<void> {
-  if (!images) return;
+  if (!images || images.size === 0) return;
 
-  await fs.promises.mkdir(options.cacheDir, { recursive: true });
+  await fs.promises.mkdir(dir, { recursive: true });
 
-  const { errors } = await PromisePool.withConcurrency(options.concurrency ?? downloadConrurrency)
-    .for(mergeMaps(...images))
+  const { errors } = await PromisePool.withConcurrency(concurrency)
+    .for(images)
     .process(async ([imageUrl, localUrl]) => {
-      const localDest = path.join("public", localUrl);
+      const localName = path.basename(localUrl);
+      const localDest = path.join(dir, localName);
 
-      if (await fs.promises.stat(localDest).catch(() => null)) {
-        debug(`download skipped: ${imageUrl} -> ${localDest}`);
+      if (debug && await fs.promises.stat(localDest).catch(() => null)) {
+        console.log(`astrotion: image: download skipped: ${imageUrl} -> ${localDest}`);
         return;
       }
 
-      debug(`download: ${imageUrl} -> ${localDest}`);
+      if (debug) {
+        console.log(`astrotion: image: download: ${imageUrl} -> ${localDest}`);
+      }
 
       const res = await fetch(imageUrl);
       if (res.status !== 200) {
@@ -38,18 +51,21 @@ export async function downloadImages(
       const body = await res.arrayBuffer();
 
       const ext = path.extname(localUrl);
-      if (ext === ".webp") {
+      if (optimize && ext === ".webp") {
         // optimize images
         const optimzied = await sharp(body).rotate().webp().toBuffer();
-        debug(
-          "image optimized",
-          localDest,
-          `${body.byteLength} bytes -> ${optimzied.length} bytes`,
-          `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,
-        );
-        await fs.promises.writeFile(localDest, optimzied);
+        if (debug) {
+          console.log(
+            "astrotion: image: optimized",
+            localDest,
+            `${body.byteLength} bytes -> ${optimzied.length} bytes`,
+            `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,
+          );
+        }
+        await onDownloaded(imageUrl, localDest, optimzied, true);
       } else {
-        await fs.promises.writeFile(localDest, Buffer.from(body));
+        const buf = Buffer.from(body);
+        await onDownloaded(imageUrl, localDest, buf, false);
       }
     });
 

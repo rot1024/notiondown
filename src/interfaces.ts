@@ -31,6 +31,7 @@ export type Post = {
 
 export type PostContent = {
   markdown: string;
+  html: string;
   images?: Map<string, string>;
 };
 

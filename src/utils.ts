@@ -18,32 +18,14 @@ export function mergeMaps<K, V>(
   return result;
 }
 
-export function debug(...args: any[]) {
-  // if (!DEBUG) return;
-  console.debug("astrotion:", ...args);
-}
-
 export function formatPostDate(date: string, dateFormat?: string): string {
   return format(new Date(date), dateFormat || "yyyy-MM-dd");
-}
-
-export function paginate(posts: Post[], page: string, postsPerPage = 20) {
-  const pageSize = postsPerPage;
-  const pageInt = parseInt(page, 10);
-  const pageCount = Math.ceil(posts.length / pageSize);
-  const pagePosts = posts.slice((pageInt - 1) * pageSize, pageInt * pageSize);
-
-  return {
-    pagePosts,
-    pageCount,
-    pageInt,
-    pageSize,
-  };
 }
 
 export function fileUrlToAssetUrl(
   imageUrl: string | undefined,
   id: string,
+  dir: string = ""
 ): string | undefined {
   if (!imageUrl) return undefined; // should not download
 
@@ -68,12 +50,10 @@ export function fileUrlToAssetUrl(
       : filename;
   }
 
-  const newUrl = path.join(assetsDir, finalFilename);
+  const newUrl = path.join(dir, finalFilename);
   return newUrl;
 }
 
 function isUnsplash(url: URL): boolean {
   return url.hostname === "images.unsplash.com";
 }
-
-export const assetsDir = "/static";
