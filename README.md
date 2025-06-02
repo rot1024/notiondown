@@ -12,17 +12,17 @@ npx astrotion --auth API_KEY --db database_id
 
 ```
 Options:
-  -V, --version      output the version number
-  --auth <key>       Notion API key
-  --db <id>          Notion database ID
-  --output <path>    output directory (default: "dist")
-  --imagedir <path>  image directory (default: "images")
-  --cachedir <path>  cache directory (default: "cache")
-  --cache            enable cache (default: true)
-  --download-images  download images. If "always" is specified, overwrites existing images. (default: true)
-  --optimize-images  convert images to WebP (default: true)
-  --debug            enable debug mode (default: false)
-  -h, --help         display help for command
+  -V, --version       output the version number
+  --auth <key>        Notion API key
+  --db <id>           Notion database ID
+  --output <path>     output directory (default: "dist")
+  --image-dir <path>  image directory (default: "images")
+  --cache-dir <path>  cache directory (default: "cache")
+  --format            md,html, md, or html (default: md,html)
+  --download-images   download images. If "always" is specified, overwrites existing images. (default: true)
+  --optimize-images   convert images to WebP (default: true)
+  --debug             enable debug mode (default: false)
+  -h, --help          display help for command
 ```
 
 ## Usage (lib)

@@ -14,9 +14,9 @@ program
   .requiredOption("--auth <key>", "Notion API key")
   .requiredOption("--db <id>", "Notion database ID")
   .option("--output <path>", "output directory", "dist")
-  .option("--imagedir <path>", "image directory", "images")
-  .option("--cachedir <path>", "cache directory", "cache")
-  .option("--cache", "enable cache", true)
+  .option("--image-dir <path>", "image directory", "images")
+  .option("--cache-dir <path>", "cache directory", "cache")
+  .option("--format", "md,html, md, or html (default: md,html)")
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
   .option("--debug", "enable debug mode", false);
@@ -24,13 +24,14 @@ program
 async function main() {
   program.parse();
   const options = program.opts();
-  const imageDownloadDir = join(options.output, options.imagedir);
+  const imageDownloadDir = join(options.output, options.imageDir);
+  const format = (options.format as string || "md.html").split(",").map((f) => f.trim());
 
   const client = new Client({
     databaseId: options.db,
     auth: options.auth,
-    cacheDir: options.cache ? options.cachedir : undefined,
-    imageDir: options.imagedir,
+    cacheDir: options.cache ? options.cacheDir : undefined,
+    imageDir: options.imageDir,
     debug: options.debug,
   });
 
@@ -70,18 +71,23 @@ async function main() {
     console.log(`Processing: ${post.title}`);
 
     let content = await client.getPostContent(post.id);
+    const ext = [];
 
-    const filenameMd = `${post.slug}.md`;
-    const filepathMd = join(options.output, filenameMd);
-    writeFileSync(filepathMd, content.markdown, "utf-8");
+    if (format.includes("md") && content.markdown) {
+      const filenameMd = `${post.slug}.md`;
+      const filepathMd = join(options.output, filenameMd);
+      writeFileSync(filepathMd, content.markdown, "utf-8");
+      ext.push("md");
+    }
 
-    if (content.html) {
+    if (format.includes("html") && content.html) {
       const filenameHtml = `${post.slug}.html`;
       const filepathHtml = join(options.output, filenameHtml);
       writeFileSync(filepathHtml, content.html, "utf-8");
+      ext.push("html");
     }
 
-    if (options.downloadImages && options.imagedir && content.images) {
+    if (options.downloadImages && content.images && content.images.size > 0) {
       console.log(`Downloading ${content.images.size} images for post ${post.id}...`);
       await downloadImagesWithRetry(post.id, content.images, client, {
         dir: imageDownloadDir,
@@ -92,7 +98,9 @@ async function main() {
       });
     }
 
-    console.log(`Saved: ${filepathMd}${content.html ? "/.html" : ""}`);
+    if (ext.length > 0) {
+      console.log(`Saved: ${post.slug}.${ext.length > 1 ? "{" : ""}${ext.join(",")}${ext.length > 1 ? "}" : ""}`);
+    }
   }
 
   console.log("Done!");
