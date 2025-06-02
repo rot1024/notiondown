@@ -7,13 +7,13 @@ A Node.js library to convert Notion pages to markdown and HTMLs with caching
 ## Usage (CLI)
 
 ```
-npx astrotion --api API_KEY --db database_id
+npx astrotion --auth API_KEY --db database_id
 ```
 
 ```
 Options:
   -V, --version      output the version number
-  --api <key>        Notion API key
+  --auth <key>       Notion API key
   --db <id>          Notion database ID
   --output <path>    output directory (default: "dist")
   --imagedir <path>  image download directory (default: "images")
@@ -21,6 +21,7 @@ Options:
   --cache            enable cache (default: true)
   --download-images  download images (default: true)
   --optimize-images  convert images to WebP (default: true)
+  --debug            enable debug mode (default: false)
   -h, --help         display help for command
 ```
 
@@ -53,6 +54,8 @@ for (const post of posts) {
 
   // download images to dist/images
   await downloadImages(content.images);
+  // or
+  // await downloadImagesWithRetry(post.id, content.images, client)
 }
 ```
 

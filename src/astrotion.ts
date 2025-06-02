@@ -87,11 +87,10 @@ export class Client implements ClientType {
     }
   }
 
-  async getAllTags(): Promise<string[]> {
-    const posts = await this.getAllPosts();
-    const tags = new Set<string>();
-    posts.forEach((post) => post.tags.forEach((tag) => tags.add(tag.name)));
-    return Array.from(tags);
+  async purgeCacheById(id: string) {
+    if (this.cacheClient) {
+      await this.cacheClient.purgeCacheById(id);
+    }
   }
 
   async getDatabase(): Promise<Database> {
@@ -138,18 +137,6 @@ export class Client implements ClientType {
 
     const posts = results.filter(isValidPage).map(buildPost);
     return posts;
-  }
-
-  async getPostById(postId: string | undefined): Promise<Post | undefined> {
-    if (!postId) return undefined;
-    const posts = await this.getAllPosts();
-    return posts.find((post) => post.id === postId);
-  }
-
-  async getPostBySlug(slug: string): Promise<Post | undefined> {
-    if (!slug) return undefined;
-    const posts = await this.getAllPosts();
-    return posts.find((post) => post.slug === slug);
   }
 
   async getPostContent(postId: string): Promise<PostContent> {

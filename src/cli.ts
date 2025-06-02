@@ -3,7 +3,7 @@
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { Command } from "commander";
-import { Client, downloadImages } from "./index.ts";
+import { Client, downloadImagesWithRetry } from "./index.ts";
 
 const program = new Command();
 
@@ -11,14 +11,15 @@ program
   .name("astrotion")
   .description("Convert Notion pages to markdown and HTMLs with caching")
   .version("0.1.0")
-  .requiredOption("--api <key>", "Notion API key")
+  .requiredOption("--auth <key>", "Notion API key")
   .requiredOption("--db <id>", "Notion database ID")
   .option("--output <path>", "output directory", "dist")
   .option("--imagedir <path>", "image download directory", "images")
   .option("--cachedir <path>", "cache directory", "cache")
   .option("--cache", "enable cache", true)
   .option("--download-images", "download images", true)
-  .option("--optimize-images", "convert images to WebP", true);
+  .option("--optimize-images", "convert images to WebP", true)
+  .option("--debug", "enable debug mode", false);
 
 async function main() {
   program.parse();
@@ -27,16 +28,17 @@ async function main() {
 
   const client = new Client({
     databaseId: options.db,
-    auth: options.api,
+    auth: options.auth,
     cacheDir: options.cache ? options.cachedir : undefined,
     imageDir: options.imagedir,
+    debug: options.debug,
   });
 
   console.log("Loading cache...");
   await client.loadCache();
 
   console.log("Fetching database and posts...");
-  const [db, posts] = await Promise.all([
+  const [database, posts] = await Promise.all([
     client.getDatabase(),
     client.getAllPosts(),
   ]);
@@ -45,10 +47,20 @@ async function main() {
 
   mkdirSync(options.output, { recursive: true });
 
+  // save meta.json
+  const meta = {
+    database,
+    posts
+  };
+  const metaFilePath = join(options.output, "meta.json");
+  writeFileSync(metaFilePath, JSON.stringify(meta, null, 2), "utf-8");
+  console.log(`Saved meta data to ${metaFilePath}`);
+
+  // save posts as markdown and HTML files
   for (const post of posts) {
     console.log(`Processing: ${post.title}`);
 
-    const content = await client.getPostContent(post.id);
+    let content = await client.getPostContent(post.id);
 
     const filenameMd = `${post.slug}.md`;
     const filepathMd = join(options.output, filenameMd);
@@ -59,14 +71,16 @@ async function main() {
     writeFileSync(filepathHtml, content.html, "utf-8");
 
     if (options.downloadImages && options.imagedir && content.images) {
-      await downloadImages(content.images, {
+      console.log(`Downloading ${content.images.size} images for post ${post.id}...`);
+      await downloadImagesWithRetry(post.id, content.images, client, {
         dir: imageDownloadDir,
         concurrency: options.concurrency,
         optimize: options.optimizeImages,
+        debug: options.debug,
       });
     }
 
-    console.log(`Saved: ${filepathMd}`);
+    console.log(`Saved: ${filepathMd}/.html`);
   }
 
   console.log("Done!");

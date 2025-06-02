@@ -163,6 +163,57 @@ export class CacheClient {
     await fs.promises.mkdir(this.baseDir, { recursive: true });
   }
 
+  async purgeCacheById(id: string): Promise<void> {
+    // Find all children IDs that need to be purged
+    const allIds = [id, ...this.allChildrenIds(id)];
+    
+    // Remove from memory caches
+    for (const targetId of allIds) {
+      this.updatedAtMap.delete(targetId);
+      this.cacheUpdatedAtMap.delete(targetId);
+      this.parentMap.delete(targetId);
+      
+      // Remove block cache entries with this ID
+      const keysToDelete: string[] = [];
+      for (const key of this.blockChildrenListCache.keys()) {
+        if (key.startsWith(targetId) || key.startsWith(`${targetId}_`)) {
+          keysToDelete.push(key);
+        }
+      }
+      for (const key of keysToDelete) {
+        this.blockChildrenListCache.delete(key);
+      }
+    }
+
+    if (!this.useFs) {
+      await this.#writeMetaCache();
+      return;
+    }
+
+    // Remove cache files from filesystem
+    try {
+      const dir = await fs.promises.readdir(this.baseDir);
+      const filesToDelete = dir.filter(file => {
+        if (!file.endsWith('.json') || !file.startsWith('blocks-')) return false;
+        const key = file.replace('blocks-', '').replace('.json', '');
+        return allIds.some(targetId => 
+          key.startsWith(targetId) || key.startsWith(`${targetId}_`)
+        );
+      });
+
+      await Promise.all(
+        filesToDelete.map(file => 
+          fs.promises.unlink(path.join(this.baseDir, file)).catch(() => {})
+        )
+      );
+    } catch (error) {
+      this.#log(`Failed to remove cache files for ${id}:`, error);
+    }
+
+    // Update meta cache to reflect the changes
+    await this.#writeMetaCache();
+  }
+
   #canUseCache(blockId: string): boolean {
     const parentId = this.#findParent(blockId);
     if (!parentId) return false;
