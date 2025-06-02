@@ -3,7 +3,7 @@
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { Command } from "commander";
-import { Client } from ".";
+import { Client } from "./index.ts";
 
 const program = new Command();
 

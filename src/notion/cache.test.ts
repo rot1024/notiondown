@@ -9,8 +9,8 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 import { expect, test, vi } from "vitest";
 
-import { CacheClient } from "./cache";
-import type { MinimalNotionClient } from "./minimal";
+import { CacheClient } from "./cache.ts";
+import type { MinimalNotionClient } from "./minimal.ts";
 
 test("CacheClient", async () => {
   // 1. no cache

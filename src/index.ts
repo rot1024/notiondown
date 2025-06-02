@@ -1,4 +1,4 @@
-export { downloadImages } from "./download";
-export * from "./interfaces";
-export { Client } from "./astrotion";
-export { markdownToHTML } from "./md2html";
+export { downloadImages } from "./download.ts";
+export type * from "./interfaces";
+export { Client } from "./astrotion.ts";
+export { markdownToHTML } from "./md2html.ts";

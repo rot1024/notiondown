@@ -1,7 +1,7 @@
 import type { MdBlock } from "notion-to-md/build/types";
 
-import type { Post } from "./interfaces";
-import { fileUrlToAssetUrl } from "./utils";
+import type { Post } from "./interfaces.ts";
+import { fileUrlToAssetUrl } from "./utils.ts";
 
 export function transform(
   blocks: MdBlock[],

@@ -1,3 +1,3 @@
-export { CacheClient } from "./cache";
-export { type MinimalNotionClient } from "./minimal";
-export { getAll, type NotionResponse, type Properties } from "./utils";
+export { CacheClient } from "./cache.ts";
+export { type MinimalNotionClient } from "./minimal.ts";
+export { getAll, type NotionResponse, type Properties } from "./utils.ts";

@@ -1,1 +1,1 @@
-export { newNotionToMarkdown } from "./markdown";
+export { newNotionToMarkdown } from "./markdown.ts";

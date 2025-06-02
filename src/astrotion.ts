@@ -2,19 +2,19 @@ import type { QueryDatabaseParameters } from "@notionhq/client/build/src/api-end
 import { NotionToMarkdown } from "notion-to-md";
 import { Client as RawClient } from "@notionhq/client";
 
-import { buildDatabase, buildPost, isValidPage } from "./conv";
-import { downloadImages } from "./download";
+import { buildDatabase, buildPost, isValidPage } from "./conv.ts";
+import { downloadImages } from "./download.ts";
 import type {
   Database,
   Post,
   PostContent,
   Client as ClientType,
 } from "./interfaces";
-import { markdownToHTML } from "./md2html";
-import { transform } from "./md2md";
-import { CacheClient, type MinimalNotionClient, getAll } from "./notion";
-import { newNotionToMarkdown } from "./notion-md";
-import { paginate } from "./utils";
+import { markdownToHTML } from "./md2html.ts";
+import { transform } from "./md2md.ts";
+import { CacheClient, type MinimalNotionClient, getAll } from "./notion/index.ts";
+import { newNotionToMarkdown } from "./notion-md/index.ts";
+import { paginate } from "./utils.ts";
 
 export class Client implements ClientType {
   cacheClient?: CacheClient;

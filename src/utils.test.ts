@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { fileUrlToAssetUrl } from "./utils";
+import { fileUrlToAssetUrl } from "./utils.ts";
 
 test("fileUrlToAssetUrl", () => {
   expect(

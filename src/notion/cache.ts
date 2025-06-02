@@ -7,8 +7,8 @@ import type {
   QueryDatabaseResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
-import type { MinimalNotionClient } from "./minimal";
-import { getLastEditedTime } from "./utils";
+import type { MinimalNotionClient } from "./minimal.ts";
+import { getLastEditedTime } from "./utils.ts";
 
 export type Options = {
   base: MinimalNotionClient;

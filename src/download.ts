@@ -4,7 +4,7 @@ import path from "node:path";
 import { PromisePool } from "@supercharge/promise-pool";
 import sharp from "sharp";
 
-import { debug, mergeMaps } from "./utils";
+import { debug, mergeMaps } from "./utils.ts";
 
 const downloadConrurrency = 3;
 

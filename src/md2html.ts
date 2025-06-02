@@ -6,7 +6,7 @@ import isUrl from "is-url";
 import type { Root as MdRoot, Paragraph, PhrasingContent } from "mdast";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeKatex from "rehype-katex";
-import rehypeMermaid from "rehype-mermaid";
+// import rehypeMermaid from "rehype-mermaid";
 import rehypePrism from "rehype-prism-plus";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
@@ -17,7 +17,7 @@ import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 
-import { transformers } from "./embed";
+import { transformers } from "./embed.ts";
 
 export const md2html = unified()
   .use(remarkParse)
@@ -30,7 +30,7 @@ export const md2html = unified()
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   .use(rehypeKatex)
-  .use(rehypeMermaid, { strategy: "pre-mermaid" })
+  // .use(rehypeMermaid, { strategy: "pre-mermaid" })
   .use(rehypePrism) // put after mermaid
   .use(rehypeFigure)
   .use(autoLinkForFigcaption)

@@ -4,7 +4,7 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 import { expect, test } from "vitest";
 
-import { expiresIn, expiresInForObjects } from "./utils";
+import { expiresIn, expiresInForObjects } from "./utils.ts";
 
 test("expiresIn", () => {
   const exp1 = new Date("2020-01-01");

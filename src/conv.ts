@@ -6,9 +6,9 @@ import type {
   PartialPageObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
-import type { Database, Post } from "./interfaces";
-import { type Properties } from "./notion";
-import { fileUrlToAssetUrl } from "./utils";
+import type { Database, Post } from "./interfaces.ts";
+import { type Properties } from "./notion/index.ts";
+import { fileUrlToAssetUrl } from "./utils.ts";
 
 export function buildDatabase(res: GetDatabaseResponse): Database {
   if (!("title" in res)) throw new Error("invalid database");

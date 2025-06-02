@@ -2,7 +2,7 @@ import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoin
 import { NotionToMarkdown } from "notion-to-md";
 import type { ListBlockChildrenResponseResult } from "notion-to-md/build/types";
 
-import type { MinimalNotionClient } from "../notion";
+import type { MinimalNotionClient } from "../notion/index.ts";
 
 function notionToMarkdownFrom(client: MinimalNotionClient): NotionToMarkdown {
   return new NotionToMarkdown({
