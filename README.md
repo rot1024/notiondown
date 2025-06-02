@@ -64,16 +64,24 @@ for (const post of posts) {
 ```ts
 type Options = {
   /** Notion database ID */
-  databaseId: string,
+  databaseId: string;
   /** Notion API key. It should be set until the custom client is provided. */
-  auth?: string,
+  auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
-  cacheDir?: string,
+  cacheDir?: string;
   /** Relative path to image directory, used for image URLs in markdown. Defaults to "images". */
-  imageDir?: string,
+  imageDir?: string;
+  /** Render markdown to HTML. Defaults to true. */
+  renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
-  debug?: boolean,
+  debug?: boolean;
+  /** Custom additional Notion markdown transformers */
+  notionMdTransformers?: [BlockType, NotionMdTransformer][];
+  /** Custom additional markdown transformers */
+  mdTransformers?: MdTransformer[];
+  /** Overrides unified processor */
+  md2html?: UnifiedProcessor;
   /** Advanced: override Notion client with custom one */
-  client?: MinimalNotionClient,
+  client?: MinimalNotionClient;
 };
 ```

@@ -3,22 +3,34 @@ import type { MdBlock } from "notion-to-md/build/types";
 import type { Post } from "./interfaces.ts";
 import { fileUrlToAssetUrl } from "./utils.ts";
 
-export function transform(
+export type { MdBlock } from "notion-to-md/build/types";
+
+export type MdTransformer = (block: MdBlock) => MdBlock;
+
+export function transform({
+  blocks,
+  posts,
+  images,
+  imageDir,
+  transformers = [],
+}: {
   blocks: MdBlock[],
   posts: Post[],
   images: Map<string, string>,
   imageDir?: string,
-): MdBlock[] {
+  transformers?: MdTransformer[],
+}): MdBlock[] {
   return transformMdBlocks(
     blocks,
     (block) => transformMdImageBlock(block, images, imageDir),
     (block) => transformMdLinkBlock(block, posts),
+    ...transformers,
   );
 }
 
 function transformMdBlocks(
   blocks: MdBlock[],
-  ...transformers: ((block: MdBlock) => MdBlock)[]
+  ...transformers: MdTransformer[]
 ): MdBlock[] {
   return blocks.map((block) => {
     if (block.children.length > 0) {

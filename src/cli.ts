@@ -66,9 +66,11 @@ async function main() {
     const filepathMd = join(options.output, filenameMd);
     writeFileSync(filepathMd, content.markdown, "utf-8");
 
-    const filenameHtml = `${post.slug}.html`;
-    const filepathHtml = join(options.output, filenameHtml);
-    writeFileSync(filepathHtml, content.html, "utf-8");
+    if (content.html) {
+      const filenameHtml = `${post.slug}.html`;
+      const filepathHtml = join(options.output, filenameHtml);
+      writeFileSync(filepathHtml, content.html, "utf-8");
+    }
 
     if (options.downloadImages && options.imagedir && content.images) {
       console.log(`Downloading ${content.images.size} images for post ${post.id}...`);
@@ -80,7 +82,7 @@ async function main() {
       });
     }
 
-    console.log(`Saved: ${filepathMd}/.html`);
+    console.log(`Saved: ${filepathMd}${content.html ? "/.html" : ""}`);
   }
 
   console.log("Done!");

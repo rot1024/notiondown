@@ -10,24 +10,33 @@ import type {
   PostContent,
   Client as ClientType,
 } from "./interfaces";
-import { markdownToHTML } from "./md2html.ts";
-import { transform } from "./md2md.ts";
+import { Md2Html, UnifiedProcessor } from "./md2html.ts";
+import { transform, type MdTransformer } from "./md2md.ts";
 import { CacheClient, type MinimalNotionClient, getAll } from "./notion/index.ts";
 import { newNotionToMarkdown } from "./notion-md/index.ts";
+import { type BlockType, type NotionBlockTransformer as NotionMdTransformer } from "./notion-md/index.ts";
 
 export type Options = {
   /** Notion database ID */
-  databaseId: string,
+  databaseId: string;
   /** Notion API key. It should be set until the custom client is provided. */
-  auth?: string,
+  auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
-  cacheDir?: string,
+  cacheDir?: string;
   /** Relative path to image directory, used for image URLs in markdown. Defaults to "images". */
-  imageDir?: string,
+  imageDir?: string;
+  /** Render markdown to HTML. Defaults to true. */
+  renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
-  debug?: boolean,
+  debug?: boolean;
+  /** Custom additional Notion markdown transformers */
+  notionMdTransformers?: [BlockType, NotionMdTransformer][];
+  /** Custom additional markdown transformers */
+  mdTransformers?: MdTransformer[];
+  /** Overrides unified processor */
+  md2html?: UnifiedProcessor;
   /** Advanced: override Notion client with custom one */
-  client?: MinimalNotionClient,
+  client?: MinimalNotionClient;
 };
 
 export class Client implements ClientType {
@@ -37,7 +46,10 @@ export class Client implements ClientType {
   databaseId: string;
   cacheDir?: string;
   imageDir: string;
+  renderHtml?: boolean;
   debug = false;
+  mdTransformers: MdTransformer[] = [];
+  md2html: Md2Html;
 
   constructor(options: Options) {
     if (!options.databaseId) {
@@ -72,7 +84,16 @@ export class Client implements ClientType {
     this.debug = options.debug || false;
     this.cacheDir = options.cacheDir;
     this.imageDir = options.imageDir ?? "images";
+    this.renderHtml = options.renderHtml ?? true;
+    this.mdTransformers = options.mdTransformers || [];
+
+    this.md2html = new Md2Html(options.md2html);
     this.n2m = newNotionToMarkdown(this.client);
+    if (options.notionMdTransformers) {
+      for (const [blockType, transformer] of options.notionMdTransformers) {
+        this.n2m.setCustomTransformer(blockType, transformer);
+      }
+    }
   }
 
   async loadCache() {
@@ -144,10 +165,16 @@ export class Client implements ClientType {
     const mdblocks = await this.n2m.pageToMarkdown(postId);
 
     const images = new Map<string, string>();
-    const transformed = transform(mdblocks, posts, images, this.imageDir);
+    const transformed = transform({
+      blocks: mdblocks,
+      posts,
+      images,
+      imageDir: this.imageDir,
+      transformers: this.mdTransformers,
+    });
 
     const { parent: markdown } = this.n2m.toMarkdownString(transformed);
-    const html = await markdownToHTML(markdown);
+    const html = this.renderHtml ? await this.md2html.process(markdown) : "";
 
     return {
       markdown,

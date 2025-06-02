@@ -4,6 +4,8 @@ import type { ListBlockChildrenResponseResult } from "notion-to-md/build/types";
 
 import type { MinimalNotionClient } from "../notion/index.ts";
 
+export type { CustomTransformer as NotionBlockTransformer, BlockType } from "notion-to-md/build/types";
+
 function notionToMarkdownFrom(client: MinimalNotionClient): NotionToMarkdown {
   return new NotionToMarkdown({
     notionClient: client as any,

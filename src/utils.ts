@@ -1,27 +1,5 @@
 import path from "node:path";
 
-import { format } from "date-fns";
-
-import type { Post } from "./interfaces.ts";
-
-export function mergeMaps<K, V>(
-  ...maps: (Map<K, V> | null | undefined)[]
-): Map<K, V> {
-  const result = new Map<K, V>();
-  maps.forEach((map) => {
-    if (!map) return;
-
-    map.forEach((v, k) => {
-      result.set(k, v);
-    });
-  });
-  return result;
-}
-
-export function formatPostDate(date: string, dateFormat?: string): string {
-  return format(new Date(date), dateFormat || "yyyy-MM-dd");
-}
-
 export function fileUrlToAssetUrl(
   imageUrl: string | undefined,
   id: string,

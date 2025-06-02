@@ -1,1 +1,1 @@
-export { newNotionToMarkdown } from "./markdown.ts";
+export { newNotionToMarkdown, type BlockType, type NotionBlockTransformer } from "./markdown.ts";
