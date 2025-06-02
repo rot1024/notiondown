@@ -10,17 +10,17 @@ import type { Database, Post } from "./interfaces.ts";
 import { type Properties } from "./notion/index.ts";
 import { fileUrlToAssetUrl } from "./utils.ts";
 
-export function buildDatabase(res: GetDatabaseResponse): Database {
+export function buildDatabase(res: GetDatabaseResponse, dir?: string): Database {
   if (!("title" in res)) throw new Error("invalid database");
 
   const { url: iconUrl } = getUrlFromIconAndCover(res.icon) ?? {};
   const { url: coverUrl } = getUrlFromIconAndCover(res.cover) ?? {};
-  const iconAssetUrl = fileUrlToAssetUrl(iconUrl, res.id + "_icon");
-  const coverAssetUrl = fileUrlToAssetUrl(coverUrl, res.id + "_cover");
+  const iconAssetUrl = fileUrlToAssetUrl(iconUrl, res.id + "_icon", dir);
+  const coverAssetUrl = fileUrlToAssetUrl(coverUrl, res.id + "_cover", dir);
 
-  const images = new Map<string, string>();
-  if (iconUrl && iconAssetUrl) images.set(iconUrl, iconAssetUrl);
-  if (coverUrl && coverAssetUrl) images.set(coverUrl, coverAssetUrl);
+  const images: Record<string, string> = {}
+  if (iconUrl && iconAssetUrl) images[iconUrl] = iconAssetUrl;
+  if (coverUrl && coverAssetUrl) images[coverUrl] = coverAssetUrl;
 
   return {
     title: res.title.map((text) => text.plain_text).join(""),

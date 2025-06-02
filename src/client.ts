@@ -114,6 +114,34 @@ export class Client implements ClientType {
     }
   }
 
+  async getDatabaseAndAllPosts(): Promise<{
+    database: Database;
+    posts: Post[];
+    images: Map<string, string>;
+  }> {
+    const [database, posts] = await Promise.all([
+      this.getDatabase(),
+      this.getAllPosts(),
+    ]);
+
+    const images = new Map<string, string>();
+    if (database.images) {
+      for (const [url, assetUrl] of Object.entries(database.images)) {
+        images.set(url, assetUrl);
+      }
+    }
+
+    for (const post of posts) {
+      if (post.images) {
+        for (const [url, assetUrl] of Object.entries(post.images)) {
+          images.set(url, assetUrl);
+        }
+      }
+    }
+
+    return { database, posts, images };
+  }
+
   async getDatabase(): Promise<Database> {
     const res = await this.client.databases.retrieve({
       database_id: this.databaseId,

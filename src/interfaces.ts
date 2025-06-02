@@ -1,5 +1,11 @@
 export type Client = {
+  getDatabase(): Promise<Database>;
   getAllPosts(): Promise<Post[]>;
+  getDatabaseAndAllPosts(): Promise<{
+    database: Database;
+    posts: Post[];
+    images: Map<string, string>;
+  }>;
   getPostContent(postId: string): Promise<PostContent>;
   loadCache(): Promise<void>;
   purgeCache(): Promise<void>;
@@ -11,7 +17,7 @@ export type Database = {
   description: string;
   icon?: string;
   cover?: string;
-  images?: Map<string, string>;
+  images?: Record<string, string>;
 };
 
 export type Post = {

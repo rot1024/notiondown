@@ -38,42 +38,16 @@ async function main() {
   await client.loadCache();
 
   console.log("Fetching database and posts...");
-  const [database, posts] = await Promise.all([
-    client.getDatabase(),
-    client.getAllPosts(),
-  ]);
-
+  const { database, posts, images } = await client.getDatabaseAndAllPosts();
   console.log(`Found ${posts.length} posts`);
 
   mkdirSync(options.output, { recursive: true });
 
-  // download images
-  const images = new Map<string, string>();
-  if (database.images) {
-    for (const [url, assetUrl] of database.images.entries()) {
-      images.set(url, assetUrl);
-    }
-    delete database.images; // remove images from database to clean up the meta.json
-  }
-
-  for (const post of posts) {
-    if (post.images) {
-      for (const [url, assetUrl] of Object.entries(post.images)) {
-        images.set(url, assetUrl);
-      }
-      delete post.images; // remove images from post to clean up the meta.json
-    }
-  }
-
-  console.log(`Found ${images.size} images to download`);
-  await downloadImages(images, {
-    dir: imageDownloadDir,
-    concurrency: options.concurrency,
-    optimize: options.optimizeImages,
-    debug: options.debug,
-  });
-
   // save meta.json
+  delete database.images;
+  for (const post of posts) {
+    delete post.images;
+  }
   const meta = {
     database,
     posts
@@ -81,6 +55,15 @@ async function main() {
   const metaFilePath = join(options.output, "meta.json");
   writeFileSync(metaFilePath, JSON.stringify(meta, null, 2), "utf-8");
   console.log(`Saved meta data to ${metaFilePath}`);
+
+  // download images
+  console.log(`Found ${images.size} images to download`);
+  await downloadImages(images, {
+    dir: imageDownloadDir,
+    concurrency: options.concurrency,
+    optimize: options.optimizeImages,
+    debug: options.debug,
+  });
 
   // save posts as markdown and HTML files
   for (const post of posts) {
