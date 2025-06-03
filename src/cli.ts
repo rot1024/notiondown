@@ -24,6 +24,7 @@ program
   .option("--cache", "enable cache", true)
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
+  .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)")
   .option("--debug", "enable debug mode", false);
 
 async function main() {
@@ -32,11 +33,25 @@ async function main() {
   const imageDownloadDir = join(options.output, options.imageDir);
   const format = (options.format as string || "md,html").split(",").map((f) => f.trim());
 
+  // Parse property mappings
+  let properties: Record<string, string> | undefined = undefined;
+  if (options.properties) {
+    properties = {};
+    const pairs = (options.properties as string).split(",");
+    for (const pair of pairs) {
+      const [key, value] = pair.split("=").map((s: string) => s.trim());
+      if (key && value) {
+        properties[key] = value;
+      }
+    }
+  }
+
   const client = new Client({
     databaseId: options.db,
     auth: options.auth,
     cacheDir: options.cache ? options.cacheDir : undefined,
     imageDir: options.imageDir,
+    properties,
     debug: options.debug,
   });
 

@@ -12,20 +12,21 @@ npx notiondown --auth API_KEY --db DATABASE_ID
 
 ```
 Options:
-  -V, --version       output the version number
-  --auth <key>        Notion API key
-  --db <id>           Notion database ID
-  --page <id>         Notion page ID when generating only specific page (optional)
-  --output <path>     output directory (default: "dist")
-  --image-dir <path>  image directory (default: "images")
-  --cache-dir <path>  cache directory (default: "cache")
-  --format            md,html, md, or html (default: md,html)
-  --frontmatter       add frontmatter to generated files (default: false)
-  --cache             enable cache (default: true)
-  --download-images   download images. If "always" is specified, overwrites existing images. (default: true)
-  --optimize-images   convert images to WebP (default: true)
-  --debug             enable debug mode (default: false)
-  -h, --help          display help for command
+  -V, --version           output the version number
+  --auth <key>            Notion API key
+  --db <id>               Notion database ID
+  --page <id>             Notion page ID when generating only specific page (optional)
+  --output <path>         output directory (default: "dist")
+  --image-dir <path>      image directory (default: "images")
+  --cache-dir <path>      cache directory (default: "cache")
+  --format                md,html, md, or html (default: md,html)
+  --frontmatter           add frontmatter to generated files (default: false)
+  --cache                 enable cache (default: true)
+  --download-images       download images. If "always" is specified, overwrites existing images. (default: true)
+  --optimize-images       convert images to WebP (default: true)
+  --properties <mapping>  Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)
+  --debug                 enable debug mode (default: false)
+  -h, --help              display help for command
 ```
 
 ## Usage (lib)
