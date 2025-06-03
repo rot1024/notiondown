@@ -20,12 +20,15 @@ export function transform({
   imageDir?: string,
   transformers?: MdTransformer[],
 }): MdBlock[] {
-  return transformMdBlocks(
+  const processedBlocks = transformMdBlocks(
     blocks,
     (block) => transformMdImageBlock(block, images, imageDir),
     (block) => transformMdLinkBlock(block, posts),
+    (block) => transformToggleBlock(block),
     ...transformers,
   );
+  
+  return processToggleCloseTags(processedBlocks);
 }
 
 function transformMdBlocks(
@@ -81,4 +84,43 @@ function transformMdLinkBlock(block: MdBlock, posts: Post[]): MdBlock {
   }
 
   return block;
+}
+
+// transforms toggle blocks to include child content properly
+function transformToggleBlock(block: MdBlock): MdBlock {
+  if (block.type !== "toggle") return block;
+  
+  // The block should already have the opening <details><summary> tags
+  // We need to add the closing tags after all children
+  if (block.children.length > 0) {
+    // Add closing details tag after processing children
+    const lastChild = block.children[block.children.length - 1];
+    if (lastChild) {
+      lastChild.parent += '\n\n</details>';
+    }
+  } else {
+    // No children, close the details tag immediately
+    block.parent += '\n\n</details>';
+  }
+  
+  return block;
+}
+
+// Post-process to ensure toggle tags are properly closed
+function processToggleCloseTags(blocks: MdBlock[]): MdBlock[] {
+  const result: MdBlock[] = [];
+  
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    result.push(block);
+    
+    // If this is a toggle block and it has the opening tag, ensure it's properly closed
+    if (block.type === "toggle" && block.parent.includes('<details>')) {
+      if (!block.parent.includes('</details>') && block.children.length === 0) {
+        block.parent += '\n\n</details>';
+      }
+    }
+  }
+  
+  return result;
 }

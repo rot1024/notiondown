@@ -14,6 +14,7 @@ function notionToMarkdownFrom(client: MinimalNotionClient): NotionToMarkdown {
 
 function registerTransformers(n2m: NotionToMarkdown): void {
   n2m.setCustomTransformer("image", imageTransformer);
+  n2m.setCustomTransformer("toggle", toggleTransformer);
 
   n2m.setCustomTransformer("embed", (block) => {
     const b = block as BlockObjectResponse;
@@ -65,4 +66,21 @@ export function imageTransformer(
   }
 
   return link ? `![${alt}](${link})` : false;
+}
+
+export function toggleTransformer(
+  block: ListBlockChildrenResponseResult,
+): string | false {
+  const b = block as BlockObjectResponse;
+  if (b.type !== "toggle") return false;
+
+  // Get the summary text from the toggle's rich text
+  const summary = b.toggle.rich_text
+    .map((item) => item.plain_text)
+    .join("")
+    .trim();
+
+  // Return HTML that will be processed as markdown
+  // The children will be handled separately by notion-to-md
+  return `<details>\n<summary>${summary}</summary>\n\n<!-- toggle-content-start -->\n\n`;
 }
