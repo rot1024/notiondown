@@ -76,6 +76,27 @@ type Options = {
   renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
   debug?: boolean;
+  /** Custom property names */
+  properties?: {
+    /** Title property (title, default: Page) */
+    title?: string;
+    /** Slug property (text, default: Slug) */
+    slug?: string;
+    /** Date property (date, default: Date) */
+    date?: string;
+    /** FeatureImage property (file, default: FeatureImage) */
+    featuredImage?: string;
+    /** Tags property (multi_select, default: Tags) */
+    tags?: string;
+    /** Excerpt property (text, default: Excerpt) */
+    excerpt?: string;
+    /** Rank property (number, default: Rank) */
+    rank?: string;
+    /** CreatedAt property (created_time, default: CreatedAt) */
+    createdAt?: string;
+    /** UpdatedAt property (updated_atlast_edited_time, default: UpdatedAt) */
+    updatedAt?: string;
+  }
   /** Custom additional Notion markdown transformers */
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */

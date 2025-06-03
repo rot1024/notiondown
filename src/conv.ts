@@ -10,6 +10,30 @@ import type { Database, Post } from "./interfaces.ts";
 import { type Properties } from "./notion/index.ts";
 import { fileUrlToAssetUrl } from "./utils.ts";
 
+export type PropertyNames = {
+  title: string;
+  slug: string;
+  date: string;
+  featuredImage: string;
+  tags: string;
+  excerpt: string;
+  rank: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const DEFAULT_PROPERTY_NAMES: PropertyNames = {
+  title: "Page",
+  slug: "Slug",
+  date: "Date",
+  featuredImage: "FeaturedImage",
+  tags: "Tags",
+  excerpt: "Excerpt",
+  rank: "Rank",
+  createdAt: "CreatedAt",
+  updatedAt: "UpdatedAt",
+};
+
 export function buildDatabase(res: GetDatabaseResponse, dir?: string): Database {
   if (!("title" in res)) throw new Error("invalid database");
 
@@ -37,24 +61,36 @@ export function isValidPage(
     | PartialPageObjectResponse
     | PartialDatabaseObjectResponse
     | DatabaseObjectResponse,
+  propertyNames?: Partial<PropertyNames>,
 ): p is PageObjectResponse {
+  const names = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
   const properties = "properties" in p ? p.properties : null;
+  const titleProp = properties?.[names.title];
+  const slugProp = properties?.[names.slug];
+  const dateProp = properties?.[names.date];
+  const createdAtProp = properties?.[names.createdAt];
+
   return (
     !!properties &&
-    properties.Page.type === "title" &&
-    properties.Page.title.length > 0 &&
-    properties.Slug.type === "rich_text" &&
-    properties.Slug.rich_text.length > 0 &&
-    properties.Date.type === "date"
+    titleProp?.type === "title" &&
+    titleProp.title.length > 0 &&
+    slugProp?.type === "rich_text" &&
+    slugProp.rich_text.length > 0 &&
+    (dateProp?.type === "date" || dateProp?.type === "created_time")
   );
 }
 
-export function buildPost(pageObject: PageObjectResponse, dir?: string): Post {
+export function buildPost(
+  pageObject: PageObjectResponse,
+  dir?: string,
+  propertyNames?: Partial<PropertyNames>
+): Post {
+  const names = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
   const { properties, id, icon, cover } = pageObject;
   const { url: iconUrl } = getUrlFromIconAndCover(icon) ?? {};
   const { url: coverUrl } = getUrlFromIconAndCover(cover) ?? {};
   const { url: featuredImageUrl } =
-    getUrlFromIconAndCover(properties.FeaturedImage) ?? {};
+    getUrlFromIconAndCover(properties[names.featuredImage]) ?? {};
   const iconAssetUrl = fileUrlToAssetUrl(iconUrl, id + "_icon", dir);
   const coverAssetUrl = fileUrlToAssetUrl(coverUrl, id + "_cover", dir);
   const featuredImageAssetUrl = fileUrlToAssetUrl(
@@ -69,24 +105,34 @@ export function buildPost(pageObject: PageObjectResponse, dir?: string): Post {
   if (featuredImageUrl && featuredImageAssetUrl)
     images[featuredImageUrl] = featuredImageAssetUrl;
 
+  const dateProp = properties[names.date];
+  const tagsProp = properties[names.tags];
+  const rankProp = properties[names.rank];
+  const createdAtProp = properties[names.createdAt];
+  const updatedAtProp = properties[names.updatedAt];
+
   const post: Post = {
     id: id,
-    title: getRichText(properties.Page),
+    title: getRichText(properties[names.title]),
     icon: iconAssetUrl || iconUrl,
     cover: coverAssetUrl || coverUrl,
     featuredImage: featuredImageAssetUrl || featuredImageUrl,
-    slug: getRichText(properties.Slug),
+    slug: getRichText(properties[names.slug]),
     date:
-      properties.Date.type === "date" ? properties.Date.date?.start ?? "" : "",
+      dateProp?.type === "date" ? dateProp.date?.start ?? (
+        createdAtProp.type === "created_time" ? createdAtProp.created_time : ""
+      ) : "",
     tags:
-      properties.Tags.type === "multi_select"
-        ? properties.Tags.multi_select
+      tagsProp?.type === "multi_select"
+        ? tagsProp.multi_select
         : [],
-    excerpt: getRichText(properties.Excerpt),
-    rank: properties.Rank.type === "number" ? properties.Rank.number ?? 0 : 0,
+    excerpt: getRichText(properties[names.excerpt]),
+    rank: rankProp?.type === "number" ? rankProp.number ?? 0 : 0,
+    createdAt: createdAtProp?.type === "created_time"
+      ? createdAtProp.created_time : "",
     updatedAt:
-      properties.UpdatedAt.type === "last_edited_time"
-        ? properties.UpdatedAt.last_edited_time
+      updatedAtProp?.type === "last_edited_time"
+        ? updatedAtProp.last_edited_time
         : "",
     images,
   };

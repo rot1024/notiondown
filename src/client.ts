@@ -29,6 +29,25 @@ export type Options = {
   renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
   debug?: boolean;
+  /** Custom property names */
+  properties?: {
+    /** Title property (title, default: Page) */
+    title?: string;
+    /** Slug property (text, default: Slug) */
+    slug?: string;
+    /** Date property (date, default: Date) */
+    date?: string;
+    /** FeatureImage property (file, default: FeatureImage) */
+    featuredImage?: string;
+    /** Tags property (multi_select, default: Tags) */
+    tags?: string;
+    /** Excerpt property (text, default: Excerpt) */
+    excerpt?: string;
+    /** Rank property (number, default: Rank) */
+    rank?: string;
+    /** UpdatedAt property (updated_at/last_edited_time, default: UpdatedAt) */
+    updatedAt?: string;
+  };
   /** Custom additional Notion markdown transformers */
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */
@@ -48,6 +67,7 @@ export class Client implements ClientType {
   imageDir: string;
   renderHtml?: boolean;
   debug = false;
+  properties?: Options["properties"];
   mdTransformers: MdTransformer[] = [];
   md2html: Md2Html;
 
@@ -85,6 +105,7 @@ export class Client implements ClientType {
     this.cacheDir = options.cacheDir;
     this.imageDir = options.imageDir ?? "images";
     this.renderHtml = options.renderHtml ?? true;
+    this.properties = options.properties;
     this.mdTransformers = options.mdTransformers || [];
 
     this.md2html = new Md2Html(options.md2html);
@@ -184,15 +205,15 @@ export class Client implements ClientType {
       }),
     );
 
-    const posts = results.filter(isValidPage).map(p => buildPost(p, this.imageDir));
+    const posts = results.filter(p => isValidPage(p, this.properties)).map(p => buildPost(p, this.imageDir, this.properties));
     return posts;
   }
 
   async getPostById(pageId: string): Promise<Post | null> {
     try {
       const page = await this.client.pages.retrieve({ page_id: pageId });
-      if (isValidPage(page)) {
-        return buildPost(page, this.imageDir);
+      if (isValidPage(page, this.properties)) {
+        return buildPost(page, this.imageDir, this.properties);
       }
       return null;
     } catch (error) {

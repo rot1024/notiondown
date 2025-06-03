@@ -25,6 +25,7 @@ export type Post = {
   title: string;
   slug: string;
   date: string;
+  createdAt: string;
   updatedAt: string;
   excerpt: string;
   tags: Tag[];
