@@ -1,7 +1,7 @@
 {
-  "name": "astrotion",
+  "name": "notiondown",
   "version": "0.1.0",
-  "description": "A CLI tool and library to convert Notion pages to markdown and HTML with caching.",
+  "description": "A CLI tool and Node.js library to convert Notion pages to markdown and HTML with cache support.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -25,18 +25,18 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "astrotion": "dist/cli.js"
+    "notiondown": "dist/cli.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/rot1024/astrotion.git"
+    "url": "https://github.com/rot1024/notiondown.git"
   },
   "author": "rot1024 <aayhrot@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rot1024/astrotion/issues"
+    "url": "https://github.com/rot1024/notiondown/issues"
   },
-  "homepage": "https://github.com/rot1024/astrotion#readme",
+  "homepage": "https://github.com/rot1024/notiondown#readme",
   "dependencies": {
     "@microflash/rehype-figure": "^2.1.4",
     "@notionhq/client": "^3.1.3",

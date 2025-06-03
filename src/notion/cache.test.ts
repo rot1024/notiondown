@@ -223,7 +223,7 @@ test("allChildrenIds", async () => {
 });
 
 function tmpdir(): Promise<string> {
-  return fs.promises.mkdtemp(path.join(os.tmpdir(), "astrotion-test-"));
+  return fs.promises.mkdtemp(path.join(os.tmpdir(), "notiondown-test-"));
 }
 
 const defaultLastEditedTime = "2021-01-01T00:00:00.000Z";

@@ -166,13 +166,13 @@ export class CacheClient {
   async purgeCacheById(id: string): Promise<void> {
     // Find all children IDs that need to be purged
     const allIds = [id, ...this.allChildrenIds(id)];
-    
+
     // Remove from memory caches
     for (const targetId of allIds) {
       this.updatedAtMap.delete(targetId);
       this.cacheUpdatedAtMap.delete(targetId);
       this.parentMap.delete(targetId);
-      
+
       // Remove block cache entries with this ID
       const keysToDelete: string[] = [];
       for (const key of this.blockChildrenListCache.keys()) {
@@ -196,13 +196,13 @@ export class CacheClient {
       const filesToDelete = dir.filter(file => {
         if (!file.endsWith('.json') || !file.startsWith('blocks-')) return false;
         const key = file.replace('blocks-', '').replace('.json', '');
-        return allIds.some(targetId => 
+        return allIds.some(targetId =>
           key.startsWith(targetId) || key.startsWith(`${targetId}_`)
         );
       });
 
       await Promise.all(
-        filesToDelete.map(file => 
+        filesToDelete.map(file =>
           fs.promises.unlink(path.join(this.baseDir, file)).catch(() => {})
         )
       );
@@ -308,7 +308,7 @@ export class CacheClient {
   // }
 
   #log(...args: any[]) {
-    if (this.debug) console.debug("astrotion: cache:", ...args);
+    if (this.debug) console.debug("notiondown: cache:", ...args);
   }
 }
 

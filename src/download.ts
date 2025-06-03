@@ -39,12 +39,12 @@ export async function downloadImages(
       const localDest = path.join(dir, localName);
 
       if (!overwrite && await fs.promises.stat(localDest).catch(() => null)) {
-        if (debug) console.log(`astrotion: image: download skipped: ${imageUrl} -> ${localDest}`);
+        if (debug) console.log(`notiondown: image: download skipped: ${imageUrl} -> ${localDest}`);
         return;
       }
 
       if (debug) {
-        console.log(`astrotion: image: download: ${imageUrl} -> ${localDest}`);
+        console.log(`notiondown: image: download: ${imageUrl} -> ${localDest}`);
       }
 
       const res = await fetch(imageUrl);
@@ -62,7 +62,7 @@ export async function downloadImages(
         const optimzied = await sharp(body).rotate().webp().toBuffer();
         if (debug) {
           console.log(
-            "astrotion: image: optimized",
+            "notiondown: image: optimized",
             localDest,
             `${body.byteLength} bytes -> ${optimzied.length} bytes`,
             `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,

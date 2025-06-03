@@ -1,13 +1,13 @@
-# astrotion
+# notiondown
 
-A Node.js library to convert Notion pages to markdown and HTMLs with caching
+A CLI tool and Node.js library to convert Notion pages to markdown and HTML with cache support.
 
 💡 Are you looking for an Astro theme? -> [astrotion-theme](https://github.com/rot1024/astrotion-theme)
 
 ## Usage (CLI)
 
 ```
-npx astrotion --auth API_KEY --db database_id
+npx notiondown --auth API_KEY --db database_id
 ```
 
 ```
@@ -28,7 +28,7 @@ Options:
 ## Usage (lib)
 
 ```ts
-import { Client } from "astrotion";
+import { Client } from "notiondown";
 
 const client = new Client({
   auth: "NOTION_API_KEY",

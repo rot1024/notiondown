@@ -4,13 +4,14 @@ import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { Command } from "commander";
 import { Client, downloadImages, downloadImagesWithRetry } from "./index.ts";
+import pkg from "../package.json";
 
 const program = new Command();
 
 program
-  .name("astrotion")
-  .description("Convert Notion pages to markdown and HTMLs with caching")
-  .version("0.1.0")
+  .name(pkg.name)
+  .description(pkg.description)
+  .version(pkg.version)
   .requiredOption("--auth <key>", "Notion API key")
   .requiredOption("--db <id>", "Notion database ID")
   .option("--output <path>", "output directory", "dist")
