@@ -33,7 +33,10 @@ import { Client } from "notiondown";
 
 const client = new Client({
   auth: "NOTION_API_KEY",
-  db: "DATABASE_ID",
+  databaseId: "DATABASE_ID",
+  cacheDir: "cache",
+  // Transform internal page links to .html files
+  internalLink: (slug) => `${slug}.html`,
 });
 
 // if cache is available, load it
@@ -46,8 +49,9 @@ const db = await client.getDatabase();
 const posts = await client.getAllPosts();
 
 for (const post of posts) {
-  // get post content (also images will be donwloaded)
-  const content = await client.getPostContent(post.id);
+  // get post content (also images will be downloaded)
+  // Pass all posts for internal link resolution
+  const content = await client.getPostContent(post.id, posts);
 
   // content.markdown is markdown
 
@@ -94,9 +98,11 @@ type Options = {
     rank?: string;
     /** CreatedAt property (created_time, default: CreatedAt) */
     createdAt?: string;
-    /** UpdatedAt property (updated_atlast_edited_time, default: UpdatedAt) */
+    /** UpdatedAt property (updated_at/last_edited_time, default: UpdatedAt) */
     updatedAt?: string;
-  }
+  };
+  /** Transform function for internal page links. Defaults to post slug without extension. */
+  internalLink?: (post: Post) => string;
   /** Custom additional Notion markdown transformers */
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */

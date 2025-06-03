@@ -48,6 +48,8 @@ export type Options = {
     /** UpdatedAt property (updated_at/last_edited_time, default: UpdatedAt) */
     updatedAt?: string;
   };
+  /** Transform function for internal page links. Defaults to slug without extension. */
+  internalLink?: (post: Post) => string;
   /** Custom additional Notion markdown transformers */
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */
@@ -68,6 +70,7 @@ export class Client implements ClientType {
   renderHtml?: boolean;
   debug = false;
   properties?: Options["properties"];
+  internalLink?: (post: Post) => string;
   mdTransformers: MdTransformer[] = [];
   md2html: Md2Html;
 
@@ -106,6 +109,7 @@ export class Client implements ClientType {
     this.imageDir = options.imageDir ?? "images";
     this.renderHtml = options.renderHtml ?? true;
     this.properties = options.properties;
+    this.internalLink = options.internalLink;
     this.mdTransformers = options.mdTransformers || [];
 
     this.md2html = new Md2Html(options.md2html);
@@ -224,8 +228,7 @@ export class Client implements ClientType {
     }
   }
 
-  async getPostContent(postId: string): Promise<PostContent> {
-    const posts = await this.getAllPosts();
+  async getPostContent(postId: string, posts?: Post[]): Promise<PostContent> {
     const mdblocks = await this.n2m.pageToMarkdown(postId);
 
     const images = new Map<string, string>();
@@ -234,6 +237,7 @@ export class Client implements ClientType {
       posts,
       images,
       imageDir: this.imageDir,
+      internalLink: this.internalLink,
       transformers: this.mdTransformers,
     });
 

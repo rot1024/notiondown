@@ -110,18 +110,18 @@ async function main() {
   for (const post of posts) {
     console.log(`Processing: ${post.title}`);
 
-    let content = await client.getPostContent(post.id);
+    let content = await client.getPostContent(post.id, posts);
     const ext = [];
 
     if (format.includes("md") && content.markdown) {
-      const filenameMd = `${post.slug}.md`;
+      const filenameMd = `${post.slug || post.id}.md`;
       const filepathMd = join(options.output, filenameMd);
       writeFileSync(filepathMd, content.markdown, "utf-8");
       ext.push("md");
     }
 
     if (format.includes("html") && content.html) {
-      const filenameHtml = `${post.slug}.html`;
+      const filenameHtml = `${post.slug || post.id}.html`;
       const filepathHtml = join(options.output, filenameHtml);
       writeFileSync(filepathHtml, content.html, "utf-8");
       ext.push("html");
@@ -139,7 +139,7 @@ async function main() {
     }
 
     if (ext.length > 0) {
-      console.log(`Saved: ${post.slug}.${ext.length > 1 ? "{" : ""}${ext.join(",")}${ext.length > 1 ? "}" : ""}`);
+      console.log(`Saved: ${post.slug || post.id}.${ext.length > 1 ? "{" : ""}${ext.join(",")}${ext.length > 1 ? "}" : ""}`);
     }
   }
 
