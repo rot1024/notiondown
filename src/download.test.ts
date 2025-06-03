@@ -22,7 +22,7 @@ describe("CLI Image Download Retry Logic", () => {
 
     mockDownloadImages.mockResolvedValueOnce(undefined);
 
-    await downloadImagesWithRetry( "post-123", images, mockClient, {
+    await downloadImagesWithRetry(images, "post-123", mockClient, {
       dir: "/test/images",
       downloadImages: mockDownloadImages,
     });
@@ -49,7 +49,7 @@ describe("CLI Image Download Retry Logic", () => {
     // Second call succeeds
     mockDownloadImages.mockResolvedValueOnce(undefined);
 
-    await downloadImagesWithRetry("post-123", originalImages, mockClient, {
+    await downloadImagesWithRetry(originalImages, "post-123", mockClient, {
       dir: "/test/images",
       downloadImages: mockDownloadImages,
     });
@@ -71,7 +71,7 @@ describe("CLI Image Download Retry Logic", () => {
     mockDownloadImages.mockRejectedValueOnce(networkError);
 
     await expect(
-      downloadImagesWithRetry("post-123", images, mockClient, {
+      downloadImagesWithRetry(images, "post-123", mockClient, {
         dir: "/test/images",
         downloadImages: mockDownloadImages,
       })
@@ -95,7 +95,7 @@ describe("CLI Image Download Retry Logic", () => {
       images: new Map(),
     });
 
-    await downloadImagesWithRetry("post-123", originalImages, mockClient, {
+    await downloadImagesWithRetry(originalImages, "post-123", mockClient, {
       dir: "/test/images",
       downloadImages: mockDownloadImages,
     });

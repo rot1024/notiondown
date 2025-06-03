@@ -11,19 +11,28 @@ import { type Properties } from "./notion/index.ts";
 import { fileUrlToAssetUrl } from "./utils.ts";
 
 export type PropertyNames = {
-  title: string;
-  slug: string;
-  date: string;
-  featuredImage: string;
-  tags: string;
-  excerpt: string;
-  rank: string;
-  createdAt: string;
-  updatedAt: string;
+  /** Title property (title, default: Title) */
+  title?: string;
+  /** Slug property (text, default: Slug) */
+  slug?: string;
+  /** Date property (date, default: Date) */
+  date?: string;
+  /** FeatureImage property (file, default: FeatureImage) */
+  featuredImage?: string;
+  /** Tags property (multi_select, default: Tags) */
+  tags?: string;
+  /** Excerpt property (text, default: Excerpt) */
+  excerpt?: string;
+  /** Rank property (number, default: Rank) */
+  rank?: string;
+  /** CreatedAt property (created_time, default: CreatedAt) */
+  createdAt?: string;
+  /** UpdatedAt property (last_edited_time, default: UpdatedAt) */
+  updatedAt?: string;
 };
 
-const DEFAULT_PROPERTY_NAMES: PropertyNames = {
-  title: "Page",
+const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
+  title: "Title",
   slug: "Slug",
   date: "Date",
   featuredImage: "FeaturedImage",

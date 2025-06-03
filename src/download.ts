@@ -88,8 +88,8 @@ export async function downloadImages(
  * refetches the post content, and retries the image download with fresh URLs.
  */
 export async function downloadImagesWithRetry(
-  postId: string,
   images: Map<string, string> | null | undefined,
+  postId: string,
   client: Client,
   options: {
     downloadImages?: typeof downloadImages;

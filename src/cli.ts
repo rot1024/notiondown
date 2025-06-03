@@ -20,10 +20,10 @@ program
   .option("--image-dir <path>", "image directory", "images")
   .option("--cache-dir <path>", "cache directory", "cache")
   .option("--format", "md,html, md, or html (default: md,html)")
+  .option("--frontmatter", "add frontmatter to generated files", false)
   .option("--cache", "enable cache", true)
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
-  .option("--frontmatter", "add frontmatter to generated files", false)
   .option("--debug", "enable debug mode", false);
 
 async function main() {
@@ -145,7 +145,7 @@ async function main() {
 
     if (options.downloadImages && content.images && content.images.size > 0) {
       console.log(`Downloading ${content.images.size} images for post ${post.id}...`);
-      await downloadImagesWithRetry(post.id, content.images, client, {
+      await downloadImagesWithRetry(content.images, post.id, client, {
         dir: imageDownloadDir,
         concurrency: options.concurrency,
         optimize: options.optimizeImages,

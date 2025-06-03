@@ -2,7 +2,7 @@ import type { QueryDatabaseParameters } from "@notionhq/client/build/src/api-end
 import { NotionToMarkdown } from "notion-to-md";
 import { Client as RawClient } from "@notionhq/client";
 
-import { buildDatabase, buildPost, isValidPage } from "./conv.ts";
+import { buildDatabase, buildPost, isValidPage, PropertyNames } from "./conv.ts";
 
 import type {
   Database,
@@ -30,24 +30,7 @@ export type Options = {
   /** If true, debug messages will be logged to console. Defaults to false. */
   debug?: boolean;
   /** Custom property names */
-  properties?: {
-    /** Title property (title, default: Page) */
-    title?: string;
-    /** Slug property (text, default: Slug) */
-    slug?: string;
-    /** Date property (date, default: Date) */
-    date?: string;
-    /** FeatureImage property (file, default: FeatureImage) */
-    featuredImage?: string;
-    /** Tags property (multi_select, default: Tags) */
-    tags?: string;
-    /** Excerpt property (text, default: Excerpt) */
-    excerpt?: string;
-    /** Rank property (number, default: Rank) */
-    rank?: string;
-    /** UpdatedAt property (updated_at/last_edited_time, default: UpdatedAt) */
-    updatedAt?: string;
-  };
+  properties?: PropertyNames;
   /** Transform function for internal page links. Defaults to slug without extension. */
   internalLink?: (post: Post) => string;
   /** Custom additional Notion markdown transformers */

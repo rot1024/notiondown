@@ -2,7 +2,7 @@
 
 A CLI tool and Node.js library to convert Notion pages to markdown and HTML with cache support.
 
-💡 Are you looking for an Astro theme? -> [astrotion-theme](https://github.com/rot1024/astrotion-theme)
+💡 Are you looking for an Astro theme for Notion? -> [astrotion](https://github.com/rot1024/astrotion)
 
 ## Usage (CLI)
 
@@ -20,9 +20,10 @@ Options:
   --image-dir <path>  image directory (default: "images")
   --cache-dir <path>  cache directory (default: "cache")
   --format            md,html, md, or html (default: md,html)
+  --frontmatter       add frontmatter to generated files (default: false)
+  --cache             enable cache (default: true)
   --download-images   download images. If "always" is specified, overwrites existing images. (default: true)
   --optimize-images   convert images to WebP (default: true)
-  --frontmatter       add frontmatter to generated files (default: false)
   --debug             enable debug mode (default: false)
   -h, --help          display help for command
 ```
@@ -61,7 +62,7 @@ for (const post of posts) {
   // download images to dist/images
   await downloadImages(content.images);
   // or
-  // await downloadImagesWithRetry(post.id, content.images, client)
+  // await downloadImagesWithRetry(content.images, post.id, client)
 }
 ```
 
@@ -83,7 +84,7 @@ type Options = {
   debug?: boolean;
   /** Custom property names */
   properties?: {
-    /** Title property (title, default: Page) */
+    /** Title property (title, default: Title) */
     title?: string;
     /** Slug property (text, default: Slug) */
     slug?: string;
@@ -99,7 +100,7 @@ type Options = {
     rank?: string;
     /** CreatedAt property (created_time, default: CreatedAt) */
     createdAt?: string;
-    /** UpdatedAt property (updated_at/last_edited_time, default: UpdatedAt) */
+    /** UpdatedAt property (last_edited_time, default: UpdatedAt) */
     updatedAt?: string;
   };
   /** Transform function for internal page links. Defaults to post slug without extension. */
