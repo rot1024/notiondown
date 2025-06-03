@@ -1,4 +1,4 @@
-import path from "node:path";
+import { extname, join } from "node:path";
 
 export function fileUrlToAssetUrl(
   imageUrl: string | undefined,
@@ -15,7 +15,7 @@ export function fileUrlToAssetUrl(
   const filename = url.pathname.split("/").at(-1);
   if (!filename) return imageUrl;
 
-  const ext = path.extname(filename);
+  const ext = extname(filename);
   let finalFilename = filename;
 
   // it may be animated gif, but sharp does not support converting it to animated webp
@@ -31,7 +31,9 @@ export function fileUrlToAssetUrl(
     finalFilename = id ? id + ext : filename;
   }
 
-  const newUrl = path.join(dir, finalFilename);
+  if (!finalFilename) return imageUrl;
+
+  const newUrl = join(dir, finalFilename);
   return newUrl;
 }
 

@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import path from "node:path";
+import { basename, extname, join } from "node:path";
 
 import { PromisePool } from "@supercharge/promise-pool";
 import sharp from "sharp";
@@ -35,11 +35,27 @@ export async function downloadImages(
   const { errors } = await PromisePool.withConcurrency(concurrency)
     .for(images)
     .process(async ([imageUrl, localUrl]) => {
-      const localName = path.basename(localUrl);
-      const localDest = path.join(dir, localName);
+      if (!imageUrl || !localUrl) {
+        if (debug) {
+          console.warn(`notiondown: image: skipping invalid image URL: ${imageUrl} -> ${localUrl}`);
+        }
+        return;
+      }
+
+      const localName = basename(localUrl);
+      if (!localName) {
+        if (debug) {
+          console.warn(`notiondown: image: skipping invalid local URL: ${localUrl}`);
+        }
+        return;
+      }
+
+      const localDest = join(dir, localName);
 
       if (!overwrite && await fs.promises.stat(localDest).catch(() => null)) {
-        if (debug) console.log(`notiondown: image: download skipped: ${imageUrl} -> ${localDest}`);
+        if (debug) {
+          console.log(`notiondown: image: download skipped: ${imageUrl} -> ${localDest}`);
+        }
         return;
       }
 
@@ -56,7 +72,7 @@ export async function downloadImages(
 
       const body = await res.arrayBuffer();
 
-      const ext = path.extname(localUrl);
+      const ext = extname(localUrl);
       if (optimize && ext === ".webp") {
         // optimize images
         const optimzied = await sharp(body).rotate().webp().toBuffer();
