@@ -4,6 +4,7 @@ import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { Command } from "commander";
 import { Client, downloadImages, downloadImagesWithRetry } from "./index.ts";
+import type { Post } from "./interfaces.ts";
 import pkg from "../package.json";
 
 const program = new Command();
@@ -22,6 +23,7 @@ program
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
   .option("--page <id>", "generate only specific page by ID")
+  .option("--frontmatter", "add frontmatter to generated files", false)
   .option("--debug", "enable debug mode", false);
 
 async function main() {
@@ -116,14 +118,28 @@ async function main() {
     if (format.includes("md") && content.markdown) {
       const filenameMd = `${post.slug || post.id}.md`;
       const filepathMd = join(options.output, filenameMd);
-      writeFileSync(filepathMd, content.markdown, "utf-8");
+      let markdownContent = content.markdown;
+
+      if (options.frontmatter) {
+        const frontmatter = generateFrontmatter(post);
+        markdownContent = frontmatter + content.markdown;
+      }
+
+      writeFileSync(filepathMd, markdownContent, "utf-8");
       ext.push("md");
     }
 
     if (format.includes("html") && content.html) {
       const filenameHtml = `${post.slug || post.id}.html`;
       const filepathHtml = join(options.output, filenameHtml);
-      writeFileSync(filepathHtml, content.html, "utf-8");
+      let htmlContent = content.html;
+
+      if (options.frontmatter) {
+        const htmlMetadata = generateHtmlMetadata(post);
+        htmlContent = htmlMetadata + content.html;
+      }
+
+      writeFileSync(filepathHtml, htmlContent, "utf-8");
       ext.push("html");
     }
 
@@ -150,3 +166,87 @@ main().catch((error) => {
   console.error("Error:", error);
   process.exit(1);
 });
+
+function generateFrontmatter(post: Post): string {
+  const frontmatter: Record<string, any> = {
+    title: post.title,
+    slug: post.slug || post.id,
+    date: post.date,
+    excerpt: post.excerpt,
+    tags: post.tags.map(tag => tag.name),
+    rank: post.rank,
+  };
+
+  // Add createdAt and updatedAt if they exist
+  if (post.createdAt) {
+    frontmatter.createdAt = post.createdAt;
+  }
+  if (post.updatedAt) {
+    frontmatter.updatedAt = post.updatedAt;
+  }
+
+  // Add icon and cover if they exist
+  if (post.icon) {
+    frontmatter.icon = post.icon;
+  }
+  if (post.cover) {
+    frontmatter.cover = post.cover;
+  }
+  if (post.featuredImage) {
+    frontmatter.featuredImage = post.featuredImage;
+  }
+
+  // Convert to YAML frontmatter
+  const yamlLines = Object.entries(frontmatter)
+    .filter(([_, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => {
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return `${key}: []`;
+        }
+        return `${key}:\n${value.map(item => `  - "${item}"`).join('\n')}`;
+      }
+      if (typeof value === 'string') {
+        // Escape quotes and handle multiline strings
+        const escapedValue = value.replace(/"/g, '\\"');
+        return `${key}: "${escapedValue}"`;
+      }
+      return `${key}: ${value}`;
+    });
+
+  return `---\n${yamlLines.join('\n')}\n---\n\n`;
+}
+
+function generateHtmlMetadata(post: Post): string {
+  const metadata: Record<string, any> = {
+    title: post.title,
+    slug: post.slug || post.id,
+    date: post.date,
+    excerpt: post.excerpt,
+    tags: post.tags.map(tag => tag.name),
+    rank: post.rank,
+  };
+
+  // Add createdAt and updatedAt if they exist
+  if (post.createdAt) {
+    metadata.createdAt = post.createdAt;
+  }
+  if (post.updatedAt) {
+    metadata.updatedAt = post.updatedAt;
+  }
+
+  // Add icon and cover if they exist
+  if (post.icon) {
+    metadata.icon = post.icon;
+  }
+  if (post.cover) {
+    metadata.cover = post.cover;
+  }
+  if (post.featuredImage) {
+    metadata.featuredImage = post.featuredImage;
+  }
+
+  // Convert to JSON and embed in HTML comment
+  const jsonData = JSON.stringify(metadata, null, 2);
+  return `<!--\n${jsonData}\n-->\n\n`;
+}
