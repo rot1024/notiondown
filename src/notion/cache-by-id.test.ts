@@ -26,6 +26,9 @@ describe("CacheClient purgeCacheById", () => {
           list: async () => emptyListBlock,
         },
       },
+      pages: {
+        retrieve: async () => ({ id: "page1", object: "page" }) as any,
+      },
     };
 
     // Ensure test directory exists

@@ -18,8 +18,10 @@ program
   .option("--image-dir <path>", "image directory", "images")
   .option("--cache-dir <path>", "cache directory", "cache")
   .option("--format", "md,html, md, or html (default: md,html)")
+  .option("--cache", "enable cache", true)
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
+  .option("--page <id>", "generate only specific page by ID")
   .option("--debug", "enable debug mode", false);
 
 async function main() {
@@ -39,18 +41,55 @@ async function main() {
   console.log("Loading cache...");
   await client.loadCache();
 
-  console.log("Fetching database and posts...");
-  const { database, posts, images } = await client.getDatabaseAndAllPosts();
-  console.log(`Found ${posts.length} posts`);
+  let posts;
+  let database;
+  let images = new Map<string, string>();
+
+  if (options.page) {
+    // Generate only specific page
+    console.log(`Fetching specific page: ${options.page}`);
+    const post = await client.getPostById(options.page);
+    if (!post) {
+      console.error(`Page with ID ${options.page} not found or not accessible`);
+      process.exit(1);
+    }
+    posts = [post];
+    database = await client.getDatabase();
+
+    // Collect images from database and the specific post
+    if (database.images) {
+      for (const [url, assetUrl] of Object.entries(database.images)) {
+        images.set(url, assetUrl);
+      }
+    }
+    if (post.images) {
+      for (const [url, assetUrl] of Object.entries(post.images)) {
+        images.set(url, assetUrl);
+      }
+    }
+
+    console.log(`Found page: ${post.title}`);
+  } else {
+    // Generate all posts
+    console.log("Fetching database and posts...");
+    const result = await client.getDatabaseAndAllPosts();
+    database = result.database;
+    posts = result.posts;
+    images = result.images;
+    console.log(`Found ${posts.length} posts`);
+  }
 
   mkdirSync(options.output, { recursive: true });
 
   // save meta.json
-  delete database.images;
-  for (const post of posts) {
-    delete post.images;
-  }
-  const meta = { database, posts };
+  const metaData = { ...database };
+  delete metaData.images;
+  const postsData = posts.map(post => {
+    const postData = { ...post };
+    delete postData.images;
+    return postData;
+  });
+  const meta = { database: metaData, posts: postsData };
   const metaFilePath = join(options.output, "meta.json");
   writeFileSync(metaFilePath, JSON.stringify(meta, null, 2), "utf-8");
   console.log(`Saved meta data to ${metaFilePath}`);

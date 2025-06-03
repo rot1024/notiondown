@@ -7,7 +7,7 @@ A CLI tool and Node.js library to convert Notion pages to markdown and HTML with
 ## Usage (CLI)
 
 ```
-npx notiondown --auth API_KEY --db database_id
+npx notiondown --auth API_KEY --db DATABASE_ID
 ```
 
 ```
@@ -21,6 +21,7 @@ Options:
   --format            md,html, md, or html (default: md,html)
   --download-images   download images. If "always" is specified, overwrites existing images. (default: true)
   --optimize-images   convert images to WebP (default: true)
+  --page              Notion page ID to retribe a specific page instead of all pages in the database
   --debug             enable debug mode (default: false)
   -h, --help          display help for command
 ```

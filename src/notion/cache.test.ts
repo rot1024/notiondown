@@ -4,6 +4,7 @@ import path from "node:path";
 
 import type {
   GetDatabaseResponse,
+  GetPageResponse,
   ListBlockChildrenResponse,
   QueryDatabaseResponse,
 } from "@notionhq/client/build/src/api-endpoints";
@@ -348,5 +349,20 @@ const baseClient = (lastEditedTime?: string) =>
           );
         }),
       },
+    },
+    pages: {
+      retrieve: vi.fn(async (): Promise<GetPageResponse> => {
+        return {
+          object: "page",
+          id: "pageId",
+          created_time: "2021-01-01T00:00:00.000Z",
+          last_edited_time: "2021-01-01T00:00:00.000Z",
+          properties: {},
+          parent: {
+            type: "database_id",
+            database_id: "databaseId",
+          },
+        } as GetPageResponse;
+      }),
     },
   }) satisfies MinimalNotionClient;

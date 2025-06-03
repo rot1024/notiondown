@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type {
   GetDatabaseResponse,
+  GetPageResponse,
   ListBlockChildrenResponse,
   QueryDatabaseResponse,
 } from "@notionhq/client/build/src/api-endpoints";
@@ -27,6 +28,7 @@ export class CacheClient {
   blockChildrenListCache = new Map<string, ListBlockChildrenResponse>();
   databaseCache = new Map<string, GetDatabaseResponse>();
   databaseQueryCache = new Map<string, QueryDatabaseResponse>();
+  pageCache = new Map<string, GetPageResponse>();
   updatedAtMap = new Map<string, Date>();
   cacheUpdatedAtMap = new Map<string, Date>();
   parentMap = new Map<string, string>();
@@ -125,6 +127,23 @@ export class CacheClient {
     },
   };
 
+  pages: MinimalNotionClient["pages"] = {
+    retrieve: async (args) => {
+      const pageId = args.page_id;
+
+      const cache = this.pageCache.get(pageId);
+      if (cache) {
+        this.#log("use cache: page for " + pageId);
+        return cache;
+      }
+
+      this.#log("get page " + pageId);
+      const res = await this.base.pages.retrieve(args);
+      this.pageCache.set(pageId, res);
+      return res;
+    },
+  };
+
   async loadCache(): Promise<void> {
     if (!this.useFs) return;
 
@@ -154,6 +173,7 @@ export class CacheClient {
     this.databaseCache.clear();
     this.databaseQueryCache.clear();
     this.blockChildrenListCache.clear();
+    this.pageCache.clear();
     this.updatedAtMap.clear();
     this.parentMap.clear();
 

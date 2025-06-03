@@ -146,7 +146,7 @@ export class Client implements ClientType {
     const res = await this.client.databases.retrieve({
       database_id: this.databaseId,
     });
-    return buildDatabase(res);
+    return buildDatabase(res, this.imageDir);
   }
 
   async getAllPosts(): Promise<Post[]> {
@@ -186,6 +186,21 @@ export class Client implements ClientType {
 
     const posts = results.filter(isValidPage).map(p => buildPost(p, this.imageDir));
     return posts;
+  }
+
+  async getPostById(pageId: string): Promise<Post | null> {
+    try {
+      const page = await this.client.pages.retrieve({ page_id: pageId });
+      if (isValidPage(page)) {
+        return buildPost(page, this.imageDir);
+      }
+      return null;
+    } catch (error) {
+      if (this.debug) {
+        console.error(`Failed to retrieve page ${pageId}:`, error);
+      }
+      return null;
+    }
   }
 
   async getPostContent(postId: string): Promise<PostContent> {
