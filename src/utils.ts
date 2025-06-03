@@ -26,6 +26,9 @@ export function fileUrlToAssetUrl(
     finalFilename = filenameWithoutExt
       ? filenameWithoutExt + ".webp"
       : filename;
+  } else {
+    // for gif files, use block ID but keep original extension
+    finalFilename = id ? id + ext : filename;
   }
 
   const newUrl = path.join(dir, finalFilename);

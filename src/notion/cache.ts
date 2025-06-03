@@ -83,7 +83,9 @@ export class CacheClient {
 
       this.#log("get database " + databaseId);
       const res = await this.base.databases.retrieve(args);
+
       this.databaseCache.set(databaseId, res);
+      await this.#writeMetaCache();
       return res;
     },
   };

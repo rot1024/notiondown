@@ -30,7 +30,7 @@ async function main() {
   program.parse();
   const options = program.opts();
   const imageDownloadDir = join(options.output, options.imageDir);
-  const format = (options.format as string || "md.html").split(",").map((f) => f.trim());
+  const format = (options.format as string || "md,html").split(",").map((f) => f.trim());
 
   const client = new Client({
     databaseId: options.db,
