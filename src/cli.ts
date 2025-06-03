@@ -15,6 +15,7 @@ program
   .version(pkg.version)
   .requiredOption("--auth <key>", "Notion API key")
   .requiredOption("--db <id>", "Notion database ID")
+  .option("--page <id>", "Notion page ID when generating only specific page (optional)")
   .option("--output <path>", "output directory", "dist")
   .option("--image-dir <path>", "image directory", "images")
   .option("--cache-dir <path>", "cache directory", "cache")
@@ -22,7 +23,6 @@ program
   .option("--cache", "enable cache", true)
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
-  .option("--page <id>", "generate only specific page by ID")
   .option("--frontmatter", "add frontmatter to generated files", false)
   .option("--debug", "enable debug mode", false);
 
