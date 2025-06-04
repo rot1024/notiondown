@@ -12,31 +12,34 @@ npx notiondown --auth API_KEY --db DATABASE_ID
 
 ```
 Options:
-  -V, --version                output the version number
-  --auth <key>                 Notion API key
-  --db <id>                    Notion database ID
-  --page <id>                  Notion page ID when generating only specific page (optional)
-  --output <path>              output directory (default: "dist")
-  --image-dir <path>           image directory in output dir (default: "images")
-  --cache-dir <path>           cache directory (default: "cache")
-  --format                     md,html, md, or html (default: md,html)
-  --frontmatter                add frontmatter to generated files (default: false)
-  --cache                      enable cache (default: true)
-  --download-images            download images. If "always" is specified, overwrites existing images. (default: true)
-  --optimize-images            convert images to WebP (default: true)
-  --properties <mapping>       Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)
-  --debug                      enable debug mode (default: false)
+  -V, --version                        output the version number
+  --auth <key>                         Notion API key
+  --db <id>                            Notion database ID
+  --page <id>                          Notion page ID when generating only specific page (optional)
+  --output <path>                      output directory (default: "dist")
+  --image-dir <path>                   image directory in output dir (default: "images")
+  --cache-dir <path>                   cache directory (default: "cache")
+  --format                             md,html, md, or html (default: md,html)
+  --frontmatter                        add frontmatter to generated files (default: false)
+  --cache                              enable cache (default: true)
+  --download-images                    download images. If "always" is specified, overwrites existing images. (default: true)
+  --optimize-images                    convert images to WebP (default: true)
+  --image-base-url <url>               base URL for images (e.g. https://cdn.example.com/images/)
+  --internal-link-template <template>  internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})
+  --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
+  --properties <mapping>               Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)
+  --debug                              enable debug mode (default: false)
 
   Filter Options:
-  --only-published             filter only published posts (Published=true)
-  --date-before <date>         filter posts before specified date
-  --date-after <date>          filter posts after specified date
-  --date-on <date>             filter posts on specified date
-  --tags <tags>                filter posts with specified tags (comma-separated, OR condition)
-  --tags-all <tags>            filter posts with all specified tags (comma-separated, AND condition)
-  --exclude-tags <tags>        exclude posts with specified tags (comma-separated)
+  --only-published                     filter only published posts (Published=true)
+  --date-before <date>                 filter posts before specified date
+  --date-after <date>                  filter posts after specified date
+  --date-on <date>                     filter posts on specified date
+  --tags <tags>                        filter posts with specified tags (comma-separated, OR condition)
+  --tags-all <tags>                    filter posts with all specified tags (comma-separated, AND condition)
+  --exclude-tags <tags>                exclude posts with specified tags (comma-separated)
 
-  -h, --help                   display help for command
+  -h, --help                           display help for command
 ```
 
 ## Usage (lib)
@@ -48,6 +51,15 @@ const client = new Client({
   auth: "NOTION_API_KEY",
   databaseId: "DATABASE_ID",
   cacheDir: "cache",
+});
+
+// With custom URL transforms and templates
+const customClient = new Client({
+  auth: "NOTION_API_KEY",
+  databaseId: "DATABASE_ID",
+  cacheDir: "cache",
+  imageUrlTransform: (filename) => `https://cdn.myblog.com/images/${filename}`,
+  internalLink: (post) => `https://myblog.com/posts/${post.slug || post.id}`,
 });
 
 // if cache is available, load it
@@ -114,6 +126,8 @@ type Options = {
     /** UpdatedAt property (last_edited_time, default: UpdatedAt) */
     updatedAt?: string;
   };
+  /** Transform function for image URLs. Takes filename and returns the desired URL. */
+  imageUrlTransform?: (filename: string) => string;
   /** Transform function for internal page links. Defaults to post slug without extension. */
   internalLink?: (post: Post) => string;
   /** Custom additional Notion markdown transformers */
@@ -176,6 +190,15 @@ npx notiondown --auth API_KEY --db DATABASE_ID --only-published --tags "tech" --
 
 # Custom property names with filtering
 npx notiondown --auth API_KEY --db DATABASE_ID --properties "published=IsPublished,tags=Categories" --only-published --tags "tech"
+
+# Custom filename template (organize by year/month)
+npx notiondown --auth API_KEY --db DATABASE_ID --filename-template "${year}/${month}/${slug}.${ext}"
+
+# Custom internal link template for blog posts
+npx notiondown --auth API_KEY --db DATABASE_ID --internal-link-template "https://myblog.com/posts/${slug}"
+
+# Using image base URL for CDN
+npx notiondown --auth API_KEY --db DATABASE_ID --image-base-url "https://cdn.myblog.com/images/"
 ```
 
 ### Library Examples

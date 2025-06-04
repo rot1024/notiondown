@@ -16,6 +16,8 @@ export type MainOptions = {
   downloadImages?: boolean | "always";
   optimizeImages?: boolean;
   imageBaseUrl?: string;
+  internalLinkTemplate?: string;
+  filenameTemplate?: string;
   properties?: string;
   debug?: boolean;
   concurrency?: number;
@@ -38,6 +40,7 @@ const DEFAULT_OPTIONS = {
   downloadImages: true,
   optimizeImages: true,
   debug: false,
+  filenameTemplate: "${slug}.${ext}",
 } satisfies Omit<MainOptions, "db" | "auth">;
 
 export async function main(opts: MainOptions) {
@@ -113,12 +116,54 @@ export async function main(opts: MainOptions) {
     imageUrlTransform = (filename: string) => baseUrl + filename;
   }
 
+  // Helper function to format date parts
+  const formatDateParts = (postDate?: string) => {
+    if (!postDate) {
+      return { date: '', year: '', month: '', day: '' };
+    }
+    const dateObj = new Date(postDate);
+    const year = dateObj.getFullYear().toString();
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    const date = `${year}-${month}-${day}`;
+    return { date, year, month, day };
+  };
+
+  // Create internal link transform function if template is provided
+  let internalLink: ((post: Post) => string) | undefined;
+  if (options.internalLinkTemplate) {
+    internalLink = (post: Post) => {
+      const { date, year, month, day } = formatDateParts(post.date);
+      return options.internalLinkTemplate!
+        .replace(/\$\{id\}/g, post.id)
+        .replace(/\$\{slug\}/g, post.slug || post.id)
+        .replace(/\$\{date\}/g, date)
+        .replace(/\$\{year\}/g, year)
+        .replace(/\$\{month\}/g, month)
+        .replace(/\$\{day\}/g, day);
+    };
+  }
+
+  // Function to generate filename from template
+  const generateFilename = (post: Post, ext: string): string => {
+    const { date, year, month, day } = formatDateParts(post.date);
+    return options.filenameTemplate
+      .replace(/\$\{id\}/g, post.id)
+      .replace(/\$\{slug\}/g, post.slug || post.id)
+      .replace(/\$\{ext\}/g, ext)
+      .replace(/\$\{date\}/g, date)
+      .replace(/\$\{year\}/g, year)
+      .replace(/\$\{month\}/g, month)
+      .replace(/\$\{day\}/g, day);
+  };
+
   const client = new Client({
     databaseId: options.db,
     auth: options.auth,
     cacheDir: options.cache ? options.cacheDir : undefined,
     imageDir: options.imageDir,
     imageUrlTransform,
+    internalLink,
     properties,
     debug: options.debug,
     filter,
@@ -200,7 +245,7 @@ export async function main(opts: MainOptions) {
     const ext = [];
 
     if (format.includes("md") && content.markdown) {
-      const filenameMd = `${post.slug || post.id}.md`;
+      const filenameMd = generateFilename(post, "md");
       const filepathMd = join(options.output, filenameMd);
       let markdownContent = content.markdown;
 
@@ -214,7 +259,7 @@ export async function main(opts: MainOptions) {
     }
 
     if (format.includes("html") && content.html) {
-      const filenameHtml = `${post.slug || post.id}.html`;
+      const filenameHtml = generateFilename(post, "html");
       const filepathHtml = join(options.output, filenameHtml);
       let htmlContent = content.html;
 
@@ -239,7 +284,8 @@ export async function main(opts: MainOptions) {
     }
 
     if (ext.length > 0) {
-      console.log(`Saved: ${post.slug || post.id}.${ext.length > 1 ? "{" : ""}${ext.join(",")}${ext.length > 1 ? "}" : ""}`);
+      const filenames = ext.map(e => generateFilename(post, e));
+      console.log(`Saved: ${filenames.join(", ")}`);
     }
   }
 
