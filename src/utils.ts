@@ -1,4 +1,7 @@
 import { extname, join } from "node:path";
+import { DatabaseFilterOptions } from "./interfaces";
+import { QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
+import { PropertyNames } from "./conv";
 
 export function fileUrlToAssetUrl(
   imageUrl: string | undefined,
@@ -39,4 +42,81 @@ export function fileUrlToAssetUrl(
 
 function isUnsplash(url: URL): boolean {
   return url.hostname === "images.unsplash.com";
+}
+
+export function buildDatabaseFilter(filter: DatabaseFilterOptions, properties: PropertyNames): QueryDatabaseParameters["filter"] {
+  const filters: any[] = [];
+
+  // Published filter
+  if (filter.published?.enabled) {
+    filters.push({
+      property: properties.published,
+      checkbox: {
+        equals: filter.published.value,
+      },
+    });
+  }
+
+  // Date filter
+  if (filter.date?.enabled) {
+    let dateValue = filter.date.value instanceof Date
+      ? filter.date.value.toISOString()
+      : filter.date.value || new Date().toISOString();
+
+    if (isNaN(Date.parse(dateValue))) {
+      dateValue = new Date().toISOString(); // Fallback to current date if invalid
+    }
+
+    filters.push({
+      property: properties.date,
+      date: {
+        [filter.date.operator]: dateValue,
+      },
+    });
+  }
+
+  // Tags filter
+  if (filter.tags?.enabled) {
+    if (filter.tags.include?.length) {
+      if (filter.tags.requireAll) {
+        // AND condition: all tags must be present
+        for (const tag of filter.tags.include) {
+          filters.push({
+            property: properties.tags,
+            multi_select: {
+              contains: tag,
+            },
+          });
+        }
+      } else {
+        // OR condition: any of the tags
+        filters.push({
+          or: filter.tags.include.map(tag => ({
+            property: properties.tags,
+            multi_select: {
+              contains: tag,
+            },
+          })),
+        });
+      }
+    }
+
+    if (filter.tags.exclude?.length) {
+      for (const tag of filter.tags.exclude) {
+        filters.push({
+          property: properties.tags,
+          multi_select: {
+            does_not_contain: tag,
+          },
+        });
+      }
+    }
+  }
+
+  // Custom filters
+  if (filter.customFilters?.length) {
+    filters.push(...filter.customFilters);
+  }
+
+  return filters.length > 1 ? { and: filters } : filters[0] || undefined;
 }

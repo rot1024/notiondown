@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common Commands
 
 - **Build**: `npm run build` - Uses tsup to build both CommonJS and ESM formats
-- **Test**: `npm test` - Runs tests with Vitest  
+- **Test**: `npm test` - Runs tests with Vitest
 - **Type Check**: `npm run typecheck` - Runs TypeScript compiler without emitting files
 - **Development CLI**: `npm run dev` - Runs CLI directly with tsx for development
 - **Single Test**: `vitest run <test-file>` - Run a specific test file
@@ -20,13 +20,13 @@ This is a dual-purpose tool: CLI and Node.js library for converting Notion datab
   - Manages Notion API connection with caching layer
   - Handles database queries with filtering (Published=true, Date<=now)
   - Coordinates markdown/HTML generation pipeline
-  
+
 - **Caching System** (`src/notion/cache.ts`): File-system based cache to reduce Notion API calls
   - CacheClient wraps the raw Notion client
   - Automatically caches database and page responses
   - Supports cache purging by ID
-  
-- **Content Pipeline**: 
+
+- **Content Pipeline**:
   1. Notion blocks → Markdown (via notion-to-md with custom transformers)
   2. Markdown transformations (`src/md2md.ts`) - post-processing, image handling
   3. Markdown → HTML (`src/md2html.ts`) - unified processor with rehype plugins
@@ -53,3 +53,7 @@ Images are collected during markdown transformation and stored in a Map. The dow
 ### Testing
 
 Uses Vitest for testing. Test files follow `*.test.ts` pattern and are co-located with source files.
+
+### Development Guidelines
+
+- When updating CLI or Client options, always update the README with the corresponding changes.

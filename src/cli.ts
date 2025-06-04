@@ -4,7 +4,7 @@ import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { Command } from "commander";
 import { Client, downloadImages, downloadImagesWithRetry } from "./index.ts";
-import type { Post } from "./interfaces.ts";
+import type { Post, DatabaseFilterOptions } from "./interfaces.ts";
 import pkg from "../package.json";
 
 const program = new Command();
@@ -25,11 +25,17 @@ program
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
   .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)")
-  .option("--debug", "enable debug mode", false);
+  .option("--debug", "enable debug mode", false)
+  // Filter options
+  .option("--only-published", "filter only published posts (Published=true)")
+  .option("--date-before <date>", "filter posts before specified date")
+  .option("--date-after <date>", "filter posts after specified date")
+  .option("--date-on <date>", "filter posts on specified date")
+  .option("--tags <tags>", "filter posts with specified tags (comma-separated, OR condition)")
+  .option("--tags-all <tags>", "filter posts with all specified tags (comma-separated, AND condition)")
+  .option("--exclude-tags <tags>", "exclude posts with specified tags (comma-separated)");
 
-async function main() {
-  program.parse();
-  const options = program.opts();
+async function main(options: Record<string, any>) {
   const imageDownloadDir = join(options.output, options.imageDir);
   const format = (options.format as string || "md,html").split(",").map((f) => f.trim());
 
@@ -46,6 +52,52 @@ async function main() {
     }
   }
 
+  // Parse filter options
+  const filter: DatabaseFilterOptions = {};
+
+  // Published filter
+  if (options.onlyPublished) {
+    filter.published = {
+      enabled: true,
+      value: true,
+    };
+  }
+
+  // Date filter
+  if (options.dateBefore || options.dateAfter || options.dateOn) {
+    filter.date = {
+      enabled: true,
+      operator: "on_or_before",
+      value: new Date(),
+    };
+
+    // Override with specific date options
+    if (options.dateBefore) {
+      filter.date.operator = "on_or_before";
+      filter.date.value = options.dateBefore;
+    } else if (options.dateAfter) {
+      filter.date.operator = "on_or_after";
+      filter.date.value = options.dateAfter;
+    } else if (options.dateOn) {
+      filter.date.operator = "equals";
+      filter.date.value = options.dateOn;
+    }
+  }
+
+  // Tags filter
+  const tagsInclude = options.tags ? options.tags.split(",").map((t: string) => t.trim()) : undefined;
+  const tagsIncludeAll = options.tagsAll ? options.tagsAll.split(",").map((t: string) => t.trim()) : undefined;
+  const tagsExclude = options.excludeTags ? options.excludeTags.split(",").map((t: string) => t.trim()) : undefined;
+
+  if (tagsInclude || tagsIncludeAll || tagsExclude) {
+    filter.tags = {
+      enabled: true,
+      include: tagsInclude || tagsIncludeAll,
+      exclude: tagsExclude,
+      requireAll: !!tagsIncludeAll,
+    };
+  }
+
   const client = new Client({
     databaseId: options.db,
     auth: options.auth,
@@ -53,6 +105,7 @@ async function main() {
     imageDir: options.imageDir,
     properties,
     debug: options.debug,
+    filter,
   });
 
   console.log("Loading cache...");
@@ -177,7 +230,9 @@ async function main() {
   console.log("Done!");
 }
 
-main().catch((error) => {
+program.parse();
+const options = program.opts();
+main(options).catch((error) => {
   console.error("Error:", error);
   process.exit(1);
 });

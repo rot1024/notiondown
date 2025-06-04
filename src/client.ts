@@ -2,19 +2,21 @@ import type { QueryDatabaseParameters } from "@notionhq/client/build/src/api-end
 import { NotionToMarkdown } from "notion-to-md";
 import { Client as RawClient } from "@notionhq/client";
 
-import { buildDatabase, buildPost, isValidPage, PropertyNames } from "./conv.ts";
+import { buildDatabase, buildPost, DEFAULT_PROPERTY_NAMES, isValidPage, PropertyNames } from "./conv.ts";
 
 import type {
   Database,
   Post,
-  PostContent,
   Client as ClientType,
+  DatabaseFilterOptions,
+  PostContent,
 } from "./interfaces";
 import { Md2Html, UnifiedProcessor } from "./md2html.ts";
 import { transform, type MdTransformer } from "./md2md.ts";
 import { CacheClient, type MinimalNotionClient, getAll } from "./notion/index.ts";
 import { newNotionToMarkdown } from "./notion-md/index.ts";
 import { type BlockType, type NotionBlockTransformer as NotionMdTransformer } from "./notion-md/index.ts";
+import { buildDatabaseFilter } from "./utils.ts";
 
 export type Options = {
   /** Notion database ID */
@@ -41,6 +43,8 @@ export type Options = {
   md2html?: UnifiedProcessor;
   /** Advanced: override Notion client with custom one */
   client?: MinimalNotionClient;
+  /** Database filter options */
+  filter?: DatabaseFilterOptions;
 };
 
 export class Client implements ClientType {
@@ -52,10 +56,11 @@ export class Client implements ClientType {
   imageDir: string;
   renderHtml?: boolean;
   debug = false;
-  properties?: Options["properties"];
+  properties: Required<PropertyNames>;
   internalLink?: (post: Post) => string;
   mdTransformers: MdTransformer[] = [];
   md2html: Md2Html;
+  filter: DatabaseFilterOptions;
 
   constructor(options: Options) {
     if (!options.databaseId) {
@@ -91,9 +96,10 @@ export class Client implements ClientType {
     this.cacheDir = options.cacheDir;
     this.imageDir = options.imageDir ?? "images";
     this.renderHtml = options.renderHtml ?? true;
-    this.properties = options.properties;
+    this.properties = { ...DEFAULT_PROPERTY_NAMES, ...options.properties };
     this.internalLink = options.internalLink;
     this.mdTransformers = options.mdTransformers || [];
+    this.filter = { ...options.filter };
 
     this.md2html = new Md2Html(options.md2html);
     this.n2m = newNotionToMarkdown(this.client);
@@ -158,32 +164,22 @@ export class Client implements ClientType {
   }
 
   async getAllPosts(): Promise<Post[]> {
+    const filter = buildDatabaseFilter(this.filter, this.properties);
     const params: QueryDatabaseParameters = {
       database_id: this.databaseId,
-      filter: {
-        and: [
-          {
-            property: "Published",
-            checkbox: {
-              equals: true,
-            },
-          },
-          {
-            property: "Date",
-            date: {
-              on_or_before: new Date().toISOString(),
-            },
-          },
-        ],
-      },
+      filter,
       sorts: [
         {
-          property: "Date",
+          property: this.properties.date,
           direction: "descending",
         },
       ],
       page_size: 100,
     };
+
+    if (this.debug) {
+      console.log("notiondown: querying database with params:", JSON.stringify(params, null, 2));
+    }
 
     const results = await getAll((cursor) =>
       this.client.databases.query({
@@ -192,14 +188,21 @@ export class Client implements ClientType {
       }),
     );
 
-    const posts = results.filter(p => isValidPage(p, this.properties)).map(p => buildPost(p, this.imageDir, this.properties));
+    const posts = results
+      .filter(p => isValidPage(p, this.properties, this.debug))
+      .map(p =>  buildPost(p, this.imageDir, this.properties));
+
+
+    if (this.debug) {
+      console.log(`notiondown: retrieved ${results.length} posts and filtered to ${posts.length} valid posts.`);
+    }
     return posts;
   }
 
   async getPostById(pageId: string): Promise<Post | null> {
     try {
       const page = await this.client.pages.retrieve({ page_id: pageId });
-      if (isValidPage(page, this.properties)) {
+      if (isValidPage(page, this.properties, this.debug)) {
         return buildPost(page, this.imageDir, this.properties);
       }
       return null;

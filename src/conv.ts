@@ -15,6 +15,8 @@ export type PropertyNames = {
   title?: string;
   /** Slug property (text, default: Slug) */
   slug?: string;
+  /** Published property (checkbox, default: Published) */
+  published?: string;
   /** Date property (date, default: Date) */
   date?: string;
   /** FeatureImage property (file, default: FeatureImage) */
@@ -31,10 +33,11 @@ export type PropertyNames = {
   updatedAt?: string;
 };
 
-const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
+export const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
   title: "Title",
   slug: "Slug",
   date: "Date",
+  published: "Published",
   featuredImage: "FeaturedImage",
   tags: "Tags",
   excerpt: "Excerpt",
@@ -42,6 +45,19 @@ const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
   createdAt: "CreatedAt",
   updatedAt: "UpdatedAt",
 };
+
+const propertyTypes: Record<keyof PropertyNames, string> = {
+  title: "title",
+  slug: "rich_text",
+  published: "checkbox",
+  date: "date",
+  featuredImage: "files",
+  tags: "multi_select",
+  excerpt: "rich_text",
+  rank: "number",
+  createdAt: "created_time",
+  updatedAt: "last_edited_time",
+}
 
 export function buildDatabase(res: GetDatabaseResponse, dir?: string): Database {
   if (!("title" in res)) throw new Error("invalid database");
@@ -71,22 +87,35 @@ export function isValidPage(
     | PartialDatabaseObjectResponse
     | DatabaseObjectResponse,
   propertyNames?: Partial<PropertyNames>,
+  debug = false,
 ): p is PageObjectResponse {
-  const names = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
+  const names: Required<PropertyNames> = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
   const properties = "properties" in p ? p.properties : null;
-  const titleProp = properties?.[names.title];
-  const slugProp = properties?.[names.slug];
-  const dateProp = properties?.[names.date];
-  const createdAtProp = properties?.[names.createdAt];
+  if (!properties) return false;
 
-  return (
-    !!properties &&
-    titleProp?.type === "title" &&
-    titleProp.title.length > 0 &&
-    slugProp?.type === "rich_text" &&
-    slugProp.rich_text.length > 0 &&
-    (dateProp?.type === "date" || dateProp?.type === "created_time")
-  );
+  const titleProp = properties[names.title];
+  if (!titleProp || titleProp.type !== "title" || titleProp.title.length === 0) {
+    if (debug) {
+      console.warn("notiondown: page does not have a valid title property");
+    }
+    return false;
+  }
+
+  for (const [k, v] of Object.entries(names)) {
+    const p = properties[v];
+    if (!p) continue;
+
+    if (p.type !== propertyTypes[k as keyof typeof propertyTypes]) {
+      if (debug) {
+        console.warn(
+          `notiondown: property "${v}" is not of type "${propertyTypes[k as keyof typeof propertyTypes]}"`,
+        );
+      }
+      return false;
+    }
+  }
+
+  return true
 }
 
 export function buildPost(
@@ -120,17 +149,30 @@ export function buildPost(
   const createdAtProp = properties[names.createdAt];
   const updatedAtProp = properties[names.updatedAt];
 
+  const title = getRichText(properties[names.title]);
+  const slugText = getRichText(properties[names.slug]);
+
+  // Use title as slug fallback if slug is empty
+  const slug = slugText || title;
+
+  // Date fallback logic: Date -> CreatedAt -> UpdatedAt
+  let date = "";
+  if (dateProp?.type === "date" && dateProp.date?.start) {
+    date = dateProp.date.start;
+  } else if (createdAtProp?.type === "created_time") {
+    date = createdAtProp.created_time;
+  } else if (updatedAtProp?.type === "last_edited_time") {
+    date = updatedAtProp.last_edited_time;
+  }
+
   const post: Post = {
     id: id,
-    title: getRichText(properties[names.title]),
+    title,
     icon: iconAssetUrl || iconUrl,
     cover: coverAssetUrl || coverUrl,
     featuredImage: featuredImageAssetUrl || featuredImageUrl,
-    slug: getRichText(properties[names.slug]),
-    date:
-      dateProp?.type === "date" ? dateProp.date?.start ?? (
-        createdAtProp.type === "created_time" ? createdAtProp.created_time : ""
-      ) : "",
+    slug,
+    date,
     tags:
       tagsProp?.type === "multi_select"
         ? tagsProp.multi_select

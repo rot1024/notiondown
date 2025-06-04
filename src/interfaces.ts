@@ -48,3 +48,22 @@ export type Tag = {
   name: string;
   color?: string;
 };
+
+export type DatabaseFilterOptions = {
+  published?: {
+    enabled: boolean;
+    value: boolean;
+  };
+  date?: {
+    enabled: boolean;
+    operator: 'on_or_before' | 'on_or_after' | 'equals' | 'before' | 'after';
+    value?: string | Date;
+  };
+  tags?: {
+    enabled: boolean;
+    include?: string[];
+    exclude?: string[];
+    requireAll?: boolean;
+  };
+  customFilters?: any[];
+};
