@@ -12,6 +12,7 @@ export function transform({
   posts,
   images,
   imageDir,
+  imageUrlTransform,
   internalLink,
   transformers = [],
 }: {
@@ -19,12 +20,13 @@ export function transform({
   posts?: Post[],
   images: Map<string, string>,
   imageDir?: string,
+  imageUrlTransform?: (filename: string) => string,
   internalLink?: (post: Post) => string,
   transformers?: MdTransformer[],
 }): MdBlock[] {
   const processedBlocks = transformMdBlocks(
     blocks,
-    (block) => transformMdImageBlock(block, images, imageDir),
+    (block) => transformMdImageBlock(block, images, imageDir, imageUrlTransform),
     (block) => transformMdLinkBlock(block, posts, internalLink),
     (block) => transformToggleBlock(block),
     ...transformers,
@@ -54,6 +56,7 @@ function transformMdImageBlock(
   block: MdBlock,
   imageUrls: Map<string, string>,
   imageDir?: string,
+  imageUrlTransform?: (filename: string) => string,
 ): MdBlock {
   if (block.type !== "image") return block;
 
@@ -61,7 +64,20 @@ function transformMdImageBlock(
 
   const imageUrl = imageMarkdown.match(/!\[.*?\]\((.+)\)/s)?.[1];
   if (imageUrl) {
-    const newUrl = fileUrlToAssetUrl(imageUrl, block.blockId, imageDir);
+    let newUrl: string | undefined;
+    
+    if (imageUrlTransform) {
+      // Use custom transform function if provided
+      const defaultUrl = fileUrlToAssetUrl(imageUrl, block.blockId, imageDir);
+      if (defaultUrl) {
+        // Extract filename from the default URL
+        const filename = defaultUrl.split("/").pop() || "";
+        newUrl = imageUrlTransform(filename);
+      }
+    } else {
+      // Use default behavior
+      newUrl = fileUrlToAssetUrl(imageUrl, block.blockId, imageDir);
+    }
 
     if (newUrl && newUrl !== imageUrl) {
       imageUrls.set(imageUrl, newUrl);

@@ -27,6 +27,8 @@ export type Options = {
   cacheDir?: string;
   /** Relative path to image directory, used for image URLs in markdown. Defaults to "images". */
   imageDir?: string;
+  /** Transform function for image URLs. Takes filename and returns the desired URL. */
+  imageUrlTransform?: (filename: string) => string;
   /** Render markdown to HTML. Defaults to true. */
   renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
@@ -54,6 +56,7 @@ export class Client implements ClientType {
   databaseId: string;
   cacheDir?: string;
   imageDir: string;
+  imageUrlTransform?: (filename: string) => string;
   renderHtml?: boolean;
   debug = false;
   properties: Required<PropertyNames>;
@@ -95,6 +98,7 @@ export class Client implements ClientType {
     this.debug = options.debug || false;
     this.cacheDir = options.cacheDir;
     this.imageDir = options.imageDir ?? "images";
+    this.imageUrlTransform = options.imageUrlTransform;
     this.renderHtml = options.renderHtml ?? true;
     this.properties = { ...DEFAULT_PROPERTY_NAMES, ...options.properties };
     this.internalLink = options.internalLink;
@@ -223,6 +227,7 @@ export class Client implements ClientType {
       posts,
       images,
       imageDir: this.imageDir,
+      imageUrlTransform: this.imageUrlTransform,
       internalLink: this.internalLink,
       transformers: this.mdTransformers,
     });

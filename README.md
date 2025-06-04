@@ -17,7 +17,7 @@ Options:
   --db <id>                    Notion database ID
   --page <id>                  Notion page ID when generating only specific page (optional)
   --output <path>              output directory (default: "dist")
-  --image-dir <path>           image directory (default: "images")
+  --image-dir <path>           image directory in output dir (default: "images")
   --cache-dir <path>           cache directory (default: "cache")
   --format                     md,html, md, or html (default: md,html)
   --frontmatter                add frontmatter to generated files (default: false)
@@ -97,6 +97,8 @@ type Options = {
     title?: string;
     /** Slug property (text, default: Slug) */
     slug?: string;
+    /** Publsihed property (checkbox, default: Publsihed) */
+    published?: string;
     /** Date property (date, default: Date) */
     date?: string;
     /** FeatureImage property (file, default: FeatureImage) */

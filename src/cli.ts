@@ -17,13 +17,14 @@ program
   .requiredOption("--db <id>", "Notion database ID")
   .option("--page <id>", "Notion page ID when generating only specific page (optional)")
   .option("--output <path>", "output directory", "dist")
-  .option("--image-dir <path>", "image directory", "images")
+  .option("--image-dir <path>", "image directory in output dir", "images")
   .option("--cache-dir <path>", "cache directory", "cache")
   .option("--format", "md,html, md, or html (default: md,html)")
   .option("--frontmatter", "add frontmatter to generated files", false)
   .option("--cache", "enable cache", true)
   .option("--download-images", "download images. If \"always\" is specified, overwrites existing images.", true)
   .option("--optimize-images", "convert images to WebP", true)
+  .option("--image-base-url <url>", "base URL for images (e.g. https://cdn.example.com/images/)")
   .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)")
   .option("--debug", "enable debug mode", false)
   // Filter options
@@ -35,7 +36,7 @@ program
   .option("--tags-all <tags>", "filter posts with all specified tags (comma-separated, AND condition)")
   .option("--exclude-tags <tags>", "exclude posts with specified tags (comma-separated)");
 
-async function main(options: Record<string, any>) {
+export async function main(options: Record<string, any>) {
   const imageDownloadDir = join(options.output, options.imageDir);
   const format = (options.format as string || "md,html").split(",").map((f) => f.trim());
 
@@ -98,11 +99,21 @@ async function main(options: Record<string, any>) {
     };
   }
 
+  // Create image URL transform function if base URL is provided
+  let imageUrlTransform: ((filename: string) => string) | undefined;
+  if (options.imageBaseUrl) {
+    const baseUrl = options.imageBaseUrl.endsWith('/')
+      ? options.imageBaseUrl
+      : options.imageBaseUrl + '/';
+    imageUrlTransform = (filename: string) => baseUrl + filename;
+  }
+
   const client = new Client({
     databaseId: options.db,
     auth: options.auth,
     cacheDir: options.cache ? options.cacheDir : undefined,
     imageDir: options.imageDir,
+    imageUrlTransform,
     properties,
     debug: options.debug,
     filter,
