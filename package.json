@@ -1,6 +1,6 @@
 {
   "name": "notiondown",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A CLI tool and Node.js library to convert Notion pages to markdown and HTML with cache support.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
