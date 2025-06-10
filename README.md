@@ -28,6 +28,7 @@ Options:
   --internal-link-template <template>  internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})
   --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
   --properties <mapping>               Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)
+  --additional-properties <properties> additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)
   --debug                              enable debug mode (default: false)
 
   Filter Options:
@@ -126,6 +127,8 @@ type Options = {
     /** UpdatedAt property (last_edited_time, default: UpdatedAt) */
     updatedAt?: string;
   };
+  /** Additional property names to include in meta.json and post objects */
+  additionalProperties?: string[];
   /** Transform function for image URLs. Takes filename and returns the desired URL. */
   imageUrlTransform?: (filename: string) => string;
   /** Transform function for internal page links. Defaults to post slug without extension. */
@@ -191,6 +194,9 @@ npx notiondown --auth API_KEY --db DATABASE_ID --only-published --tags "tech" --
 # Custom property names with filtering
 npx notiondown --auth API_KEY --db DATABASE_ID --properties "published=IsPublished,tags=Categories" --only-published --tags "tech"
 
+# Include additional properties in meta.json output
+npx notiondown --auth API_KEY --db DATABASE_ID --additional-properties "author,status,category,priority"
+
 # Custom filename template (organize by year/month)
 npx notiondown --auth API_KEY --db DATABASE_ID --filename-template "${year}/${month}/${slug}.${ext}"
 
@@ -254,5 +260,13 @@ const featuredClient = new Client({
       exclude: ["draft"]
     }
   }
+});
+
+// Include additional properties in post data
+const clientWithAdditionalProps = new Client({
+  auth: "NOTION_API_KEY",
+  databaseId: "DATABASE_ID",
+  cacheDir: "cache",
+  additionalProperties: ["author", "status", "category", "priority"]
 });
 ```
