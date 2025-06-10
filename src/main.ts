@@ -31,6 +31,10 @@ export type MainOptions = {
   excludeTags?: string;
 };
 
+type MetaPost = Post & {
+  fileName: Record<string, string>;
+}
+
 const DEFAULT_OPTIONS = {
   output: "dist",
   imageDir: "images",
@@ -41,7 +45,7 @@ const DEFAULT_OPTIONS = {
   downloadImages: true,
   optimizeImages: true,
   debug: false,
-  filenameTemplate: "${slug}.${ext}",
+  filenameTemplate: "${slug}${_lang}.${ext}",
 } satisfies Omit<MainOptions, "db" | "auth">;
 
 export async function main(opts: MainOptions) {
@@ -147,7 +151,8 @@ export async function main(opts: MainOptions) {
         .replace(/\$\{date\}/g, date)
         .replace(/\$\{year\}/g, year)
         .replace(/\$\{month\}/g, month)
-        .replace(/\$\{day\}/g, day);
+        .replace(/\$\{day\}/g, day)
+        .replace(/\$\{lang\}/g, post.lang || '');
     };
   }
 
@@ -161,7 +166,9 @@ export async function main(opts: MainOptions) {
       .replace(/\$\{date\}/g, date)
       .replace(/\$\{year\}/g, year)
       .replace(/\$\{month\}/g, month)
-      .replace(/\$\{day\}/g, day);
+      .replace(/\$\{day\}/g, day)
+      .replace(/\$\{lang\}/g, post.lang || '')
+      .replace(/\$\{_lang\}/g, post.lang ? '_' + post.lang : '');
   };
 
   const client = new Client({
@@ -224,8 +231,16 @@ export async function main(opts: MainOptions) {
   const metaData = { ...database };
   delete metaData.images;
   const postsData = posts.map(post => {
-    const postData = { ...post };
+    // Add fileName with generated file names for each format
+    const fileName: Record<string, string> = {};
+    const formatList = options.format.split(",").map((f) => f.trim());
+    for (const ext of formatList) {
+      fileName[ext] = generateFilename(post, ext);
+    }
+
+    const postData: MetaPost = { ...post, fileName };
     delete postData.images;
+
     return postData;
   });
   const meta = { database: metaData, posts: postsData };
@@ -310,6 +325,11 @@ function generateFrontmatter(post: Post): string {
     rank: post.rank,
   };
 
+  // Add lang if it exists
+  if (post.lang) {
+    frontmatter.lang = post.lang;
+  }
+
   // Add createdAt and updatedAt if they exist
   if (post.createdAt) {
     frontmatter.createdAt = post.createdAt;
@@ -359,6 +379,11 @@ function generateHtmlMetadata(post: Post): string {
     tags: post.tags.map(tag => tag.name),
     rank: post.rank,
   };
+
+  // Add lang if it exists
+  if (post.lang) {
+    metadata.lang = post.lang;
+  }
 
   // Add createdAt and updatedAt if they exist
   if (post.createdAt) {

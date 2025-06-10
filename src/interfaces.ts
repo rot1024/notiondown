@@ -30,6 +30,7 @@ export type Post = {
   excerpt: string;
   tags: Tag[];
   rank: number;
+  lang?: string;
   raw?: any;
   icon?: string;
   cover?: string;

@@ -31,6 +31,8 @@ export type PropertyNames = {
   createdAt?: string;
   /** UpdatedAt property (last_edited_time, default: UpdatedAt) */
   updatedAt?: string;
+  /** Lang property (select, default: Lang) */
+  lang?: string;
 };
 
 export const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
@@ -44,6 +46,7 @@ export const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
   rank: "Rank",
   createdAt: "CreatedAt",
   updatedAt: "UpdatedAt",
+  lang: "Lang",
 };
 
 const propertyTypes: Record<keyof PropertyNames, string> = {
@@ -57,6 +60,7 @@ const propertyTypes: Record<keyof PropertyNames, string> = {
   rank: "number",
   createdAt: "created_time",
   updatedAt: "last_edited_time",
+  lang: "select",
 }
 
 export function buildDatabase(res: GetDatabaseResponse, dir?: string): Database {
@@ -149,6 +153,7 @@ export function buildPost(
   const rankProp = properties[names.rank];
   const createdAtProp = properties[names.createdAt];
   const updatedAtProp = properties[names.updatedAt];
+  const langProp = properties[names.lang];
 
   const title = getRichText(properties[names.title]);
   const slugText = getRichText(properties[names.slug]);
@@ -191,6 +196,7 @@ export function buildPost(
         : [],
     excerpt: getRichText(properties[names.excerpt]),
     rank: rankProp?.type === "number" ? rankProp.number ?? 0 : 0,
+    lang: langProp?.type === "select" ? langProp.select?.name : undefined,
     createdAt: createdAtProp?.type === "created_time"
       ? createdAtProp.created_time : "",
     updatedAt:

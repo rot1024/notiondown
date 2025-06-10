@@ -23,7 +23,7 @@ program
   .option("--optimize-images", "convert images to WebP", true)
   .option("--image-base-url <url>", "base URL for images (e.g. https://cdn.example.com/images/)")
   .option("--internal-link-template <template>", "internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})")
-  .option("--filename-template <template>", "filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})")
+  .option("--filename-template <template>", "filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day}, ${lang}, ${_lang} (default: ${slug}${_lang}.${ext})")
   .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)")
   .option("--additional-properties <properties>", "additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)")
   .option("--debug", "enable debug mode", false)
