@@ -121,7 +121,8 @@ export function isValidPage(
 export function buildPost(
   pageObject: PageObjectResponse,
   dir?: string,
-  propertyNames?: Partial<PropertyNames>
+  propertyNames?: Partial<PropertyNames>,
+  additionalProperties?: string[]
 ): Post {
   const names = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
   const { properties, id, icon, cover } = pageObject;
@@ -165,6 +166,17 @@ export function buildPost(
     date = updatedAtProp.last_edited_time;
   }
 
+  // Extract additional properties
+  const additionalPropsData: Record<string, any> = {};
+  if (additionalProperties && additionalProperties.length > 0) {
+    for (const propName of additionalProperties) {
+      const prop = properties[propName];
+      if (prop) {
+        additionalPropsData[propName] = extractPropertyValue(prop);
+      }
+    }
+  }
+
   const post: Post = {
     id: id,
     title,
@@ -186,6 +198,7 @@ export function buildPost(
         ? updatedAtProp.last_edited_time
         : "",
     images,
+    additionalProperties: Object.keys(additionalPropsData).length > 0 ? additionalPropsData : undefined,
   };
 
   return post;
@@ -198,6 +211,70 @@ function getRichText(p: Properties | undefined): string {
     : p.type === "title" && p.title.length > 0
       ? p.title[0].plain_text
       : "";
+}
+
+function extractPropertyValue(prop: Properties): any {
+  switch (prop.type) {
+    case "rich_text":
+      return prop.rich_text.map((richText) => richText.plain_text).join("");
+    case "title":
+      return prop.title.map((title) => title.plain_text).join("");
+    case "select":
+      return prop.select ? { id: prop.select.id, name: prop.select.name, color: prop.select.color } : null;
+    case "multi_select":
+      return prop.multi_select.map(option => ({ id: option.id, name: option.name, color: option.color }));
+    case "number":
+      return prop.number;
+    case "checkbox":
+      return prop.checkbox;
+    case "url":
+      return prop.url;
+    case "date":
+      return prop.date ? {
+        start: prop.date.start,
+        end: prop.date.end,
+        time_zone: prop.date.time_zone
+      } : null;
+    case "email":
+      return prop.email;
+    case "phone_number":
+      return prop.phone_number;
+    case "created_time":
+      return prop.created_time;
+    case "last_edited_time":
+      return prop.last_edited_time;
+    case "people":
+      return prop.people.map(person => ({
+        id: person.id,
+        name: 'name' in person ? person.name : undefined,
+        avatar_url: 'avatar_url' in person ? person.avatar_url : undefined
+      }));
+    case "files":
+      return prop.files.map(file => {
+        if (file.type === "external") {
+          return { type: "external", url: file.external.url, name: file.name };
+        } else if (file.type === "file") {
+          return { type: "file", url: file.file.url, expiry_time: file.file.expiry_time, name: file.name };
+        } else {
+          return { type: "unknown", name: file.name };
+        }
+      });
+    case "relation":
+      return prop.relation.map(rel => ({ id: rel.id }));
+    case "rollup":
+      return prop.rollup.type === "array" ? prop.rollup.array : 
+             prop.rollup.type === "date" ? prop.rollup.date :
+             prop.rollup.type === "number" ? prop.rollup.number : null;
+    case "formula":
+      return prop.formula.type === "boolean" ? prop.formula.boolean :
+             prop.formula.type === "date" ? prop.formula.date :
+             prop.formula.type === "number" ? prop.formula.number :
+             prop.formula.type === "string" ? prop.formula.string : null;
+    case "status":
+      return prop.status ? { id: prop.status.id, name: prop.status.name, color: prop.status.color } : null;
+    default:
+      return null;
+  }
 }
 
 export function getUrlFromIconAndCover(

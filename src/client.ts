@@ -35,6 +35,8 @@ export type Options = {
   debug?: boolean;
   /** Custom property names */
   properties?: PropertyNames;
+  /** Additional property names to include in meta.json */
+  additionalProperties?: string[];
   /** Transform function for internal page links. Defaults to slug without extension. */
   internalLink?: (post: Post) => string;
   /** Custom additional Notion markdown transformers */
@@ -60,6 +62,7 @@ export class Client implements ClientType {
   renderHtml?: boolean;
   debug = false;
   properties: Required<PropertyNames>;
+  additionalProperties: string[];
   internalLink?: (post: Post) => string;
   mdTransformers: MdTransformer[] = [];
   md2html: Md2Html;
@@ -101,6 +104,7 @@ export class Client implements ClientType {
     this.imageUrlTransform = options.imageUrlTransform;
     this.renderHtml = options.renderHtml ?? true;
     this.properties = { ...DEFAULT_PROPERTY_NAMES, ...options.properties };
+    this.additionalProperties = options.additionalProperties || [];
     this.internalLink = options.internalLink;
     this.mdTransformers = options.mdTransformers || [];
     this.filter = { ...options.filter };
@@ -194,7 +198,7 @@ export class Client implements ClientType {
 
     const posts = results
       .filter(p => isValidPage(p, this.properties, this.debug))
-      .map(p =>  buildPost(p, this.imageDir, this.properties));
+      .map(p =>  buildPost(p, this.imageDir, this.properties, this.additionalProperties));
 
 
     if (this.debug) {
@@ -207,7 +211,7 @@ export class Client implements ClientType {
     try {
       const page = await this.client.pages.retrieve({ page_id: pageId });
       if (isValidPage(page, this.properties, this.debug)) {
-        return buildPost(page, this.imageDir, this.properties);
+        return buildPost(page, this.imageDir, this.properties, this.additionalProperties);
       }
       return null;
     } catch (error) {

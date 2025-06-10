@@ -35,6 +35,7 @@ export type Post = {
   cover?: string;
   featuredImage?: string;
   images?: Record<string, string>;
+  additionalProperties?: Record<string, any>;
 };
 
 export type PostContent = {

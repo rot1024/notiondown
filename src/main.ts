@@ -19,6 +19,7 @@ export type MainOptions = {
   internalLinkTemplate?: string;
   filenameTemplate?: string;
   properties?: string;
+  additionalProperties?: string;
   debug?: boolean;
   concurrency?: number;
   onlyPublished?: boolean;
@@ -59,6 +60,12 @@ export async function main(opts: MainOptions) {
         properties[key] = value;
       }
     }
+  }
+
+  // Parse additional properties
+  let additionalProperties: string[] | undefined = undefined;
+  if (options.additionalProperties) {
+    additionalProperties = options.additionalProperties.split(",").map((prop: string) => prop.trim()).filter(Boolean);
   }
 
   // Parse filter options
@@ -165,6 +172,7 @@ export async function main(opts: MainOptions) {
     imageUrlTransform,
     internalLink,
     properties,
+    additionalProperties,
     debug: options.debug,
     filter,
   });
