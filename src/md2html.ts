@@ -34,7 +34,7 @@ export class Md2Html {
       .use(remarkParse)
       .use(cjkEmphasis)
       .use(remarkGfm)
-      .use(remarkMath, { singleDollarTextMath: false })
+      .use(remarkMath)
       .use((remarkEmbedder as any).default as typeof remarkEmbedder, {
         transformers,
       })
