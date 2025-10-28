@@ -4,6 +4,26 @@ A CLI tool and Node.js library to convert Notion pages to markdown and HTML with
 
 💡 Are you looking for an Astro theme for Notion? -> [astrotion](https://github.com/rot1024/astrotion)
 
+### Video Optimization (Optional)
+
+To use video optimization (`--optimize-videos`), you need to install ffmpeg separately:
+
+**macOS:**
+```bash
+brew install ffmpeg
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install ffmpeg
+```
+
+**Windows:**
+```powershell
+winget install --id=Gyan.FFmpeg -e
+```
+Or download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+
 ## Usage (CLI)
 
 ```
@@ -23,7 +43,11 @@ Options:
   --frontmatter                        add frontmatter to generated files (default: false)
   --cache                              enable cache (default: true)
   --download-assets                    download assets (images, videos, audio). If "always" is specified, overwrites existing assets. (default: true)
-  --optimize-assets                    optimize assets (convert images to WebP) (default: true)
+  --optimize-images                    optimize images (convert to WebP) (default: true)
+  --optimize-videos [formats]          optimize videos (convert to H.264/AAC with ffmpeg). Specify formats to convert (e.g. "mov,avi").
+                                       WebM and MP4 are excluded by default as they are already optimized.
+                                       Use "all" to convert all video formats including WebM and MP4.
+                                       Requires ffmpeg to be installed separately.
   --asset-base-url <url>               base URL for assets (e.g. https://cdn.example.com/assets/)
   --internal-link-template <template>  internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})
   --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
@@ -82,9 +106,22 @@ for (const post of posts) {
   // content.html is html
 
   // download assets (images, videos, audio) to dist/assets
-  await downloadAssets(content.assets);
+  await downloadAssets(content.assets, {
+    dir: "dist/assets",
+    optimizeImages: true,              // optimize images (convert to WebP)
+    optimizeVideos: ["mov", "avi"],    // optimize specific video formats (requires ffmpeg)
+    // optimizeVideos: "all",          // optimize all video formats including WebM and MP4
+    // optimizeVideos: undefined,      // don't optimize videos (default)
+  });
+
+  // Note: The CLI --optimize-videos flag (without value) is equivalent to:
+  // optimizeVideos: ["mov", "avi", "mkv", "flv", "wmv", "m4v", "mpg", "mpeg"]
   // or with retry on 403 errors
-  // await downloadAssetsWithRetry(content.assets, post.id, client)
+  // await downloadAssetsWithRetry(content.assets, post.id, client, {
+  //   dir: "dist/assets",
+  //   optimizeImages: true,
+  //   optimizeVideos: ["mov", "avi"],
+  // })
 }
 ```
 
@@ -205,6 +242,16 @@ npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --internal-link-templ
 
 # Using asset base URL for CDN
 npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --asset-base-url "https://cdn.myblog.com/assets/"
+
+# Optimize videos with default formats (excludes WebM and MP4)
+# This converts: MOV, AVI, MKV, FLV, WMV, M4V, MPG, MPEG
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --optimize-videos
+
+# Optimize specific video formats only (e.g., MOV and AVI files)
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --optimize-videos "mov,avi"
+
+# Optimize all video formats including WebM and MP4
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --optimize-videos "all"
 ```
 
 ### Library Examples

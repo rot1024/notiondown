@@ -14,7 +14,8 @@ export type MainOptions = {
   frontmatter?: boolean;
   cache?: boolean;
   downloadAssets?: boolean | "always";
-  optimizeAssets?: boolean;
+  optimizeImages?: boolean;
+  optimizeVideos?: boolean | string;
   assetBaseUrl?: string;
   internalLinkTemplate?: string;
   filenameTemplate?: string;
@@ -43,7 +44,8 @@ const DEFAULT_OPTIONS = {
   frontmatter: false,
   cache: true,
   downloadAssets: true,
-  optimizeAssets: true,
+  optimizeImages: true,
+  optimizeVideos: undefined,
   debug: false,
   filenameTemplate: "${slug}${_lang}.${ext}",
 } satisfies Omit<MainOptions, "dataSource" | "auth">;
@@ -53,6 +55,24 @@ export async function main(opts: MainOptions) {
 
   const assetsDownloadDir = join(options.output, options.assetsDir);
   const format = options.format.split(",").map((f) => f.trim());
+
+  // Parse video optimization formats
+  let videoFormatsToOptimize: string[] | "all" | undefined = undefined;
+  if (options.optimizeVideos) {
+    if (typeof options.optimizeVideos === "string") {
+      if (options.optimizeVideos.toLowerCase() === "all") {
+        videoFormatsToOptimize = "all";
+      } else {
+        videoFormatsToOptimize = options.optimizeVideos
+          .split(",")
+          .map((f) => f.trim().toLowerCase())
+          .filter(Boolean);
+      }
+    } else if (options.optimizeVideos === true) {
+      // Default: exclude mp4 and webm (already optimized formats)
+      videoFormatsToOptimize = ["mov", "avi", "mkv", "flv", "wmv", "m4v", "mpg", "mpeg"];
+    }
+  }
 
   // Parse property mappings
   let properties: Record<string, string> | undefined = undefined;
@@ -255,7 +275,8 @@ export async function main(opts: MainOptions) {
     await downloadAssets(assets, {
       dir: assetsDownloadDir,
       concurrency: options.concurrency,
-      optimize: options.optimizeAssets,
+      optimizeImages: options.optimizeImages,
+      optimizeVideos: videoFormatsToOptimize,
       debug: options.debug,
       overwrite: options.downloadAssets === "always",
     });
@@ -301,7 +322,8 @@ export async function main(opts: MainOptions) {
       await downloadAssetsWithRetry(content.assets, post.id, client, {
         dir: assetsDownloadDir,
         concurrency: options.concurrency,
-        optimize: options.optimizeAssets,
+        optimizeImages: options.optimizeImages,
+        optimizeVideos: videoFormatsToOptimize,
         debug: options.debug,
         overwrite: options.downloadAssets === "always",
       });

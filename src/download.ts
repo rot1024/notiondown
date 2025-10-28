@@ -4,6 +4,7 @@ import { basename, extname, join } from "node:path";
 import { PromisePool } from "@supercharge/promise-pool";
 import sharp from "sharp";
 import { type Client } from "./interfaces";
+import { isVideoFile, optimizeVideo, shouldOptimizeVideo } from "./video";
 
 /**
  * Downloads assets (images, videos, audio) from a map of URLs to local paths.
@@ -13,7 +14,8 @@ export async function downloadAssets(
   {
     dir = "dist/images",
     concurrency = 3,
-    optimize = true,
+    optimizeImages = true,
+    optimizeVideos = undefined,
     overwrite = false,
     debug = false,
     onDownloaded: onSave = (_assetUrl, localDest, buffer, _optimized) => {
@@ -22,7 +24,8 @@ export async function downloadAssets(
   }: {
     dir?: string;
     concurrency?: number;
-    optimize?: boolean;
+    optimizeImages?: boolean;
+    optimizeVideos?: string[] | "all" | undefined;
     overwrite?: boolean;
     debug?: boolean;
     onDownloaded?: (assetUrl: string, localDest: string, buffer: Buffer<ArrayBufferLike>, optimized: boolean) => Promise<void>;
@@ -71,32 +74,58 @@ export async function downloadAssets(
       }
 
       const body = await res.arrayBuffer();
+      const buf = Buffer.from(body);
 
       const ext = extname(localUrl).toLowerCase();
       // SVG is a vector format and cannot be processed by Sharp
       const isRasterImage = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".tiff", ".bmp"].includes(ext);
+      const isVideo = isVideoFile(localUrl);
+      const shouldOptimize = isVideo && shouldOptimizeVideo(localUrl, optimizeVideos);
 
-      if (optimize && isRasterImage) {
-        // optimize raster images only (excludes SVG and other vector formats)
+      // Handle image optimization
+      if (optimizeImages && isRasterImage) {
         try {
-          const optimzied = await sharp(body).rotate().webp().toBuffer();
+          const optimized = await sharp(body).rotate().webp().toBuffer();
           if (debug) {
             console.log(
-              "notiondown: asset: optimized",
+              "notiondown: asset: optimized image",
               localDest,
-              `${body.byteLength} bytes -> ${optimzied.length} bytes`,
-              `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,
+              `${body.byteLength} bytes -> ${optimized.length} bytes`,
+              `(${Math.floor((optimized.length / body.byteLength) * 100)}%)`,
             );
           }
-          await onSave(assetUrl, localDest, optimzied, true);
+          await onSave(assetUrl, localDest, optimized, true);
         } catch (error) {
           // If Sharp fails (e.g., unsupported format despite extension), save original
-          console.log(`notiondown: asset: optimization failed for ${localDest}, saving original:`, error instanceof Error ? error.message : error);
-          const buf = Buffer.from(body);
+          if (debug) {
+            console.warn(`notiondown: asset: image optimization failed for ${localDest}, saving original:`, error instanceof Error ? error.message : error);
+          }
           await onSave(assetUrl, localDest, buf, false);
         }
-      } else {
-        const buf = Buffer.from(body);
+      }
+      // Handle video optimization
+      else if (shouldOptimize) {
+        try {
+          const optimized = await optimizeVideo(buf, { debug });
+          if (debug) {
+            console.log(
+              "notiondown: asset: optimized video",
+              localDest,
+              `${buf.length} bytes -> ${optimized.length} bytes`,
+              `(${Math.floor((optimized.length / buf.length) * 100)}%)`,
+            );
+          }
+          await onSave(assetUrl, localDest, optimized, true);
+        } catch (error) {
+          // If ffmpeg fails or is not available, save original
+          if (debug) {
+            console.warn(`notiondown: asset: video optimization failed for ${localDest}, saving original:`, error instanceof Error ? error.message : error);
+          }
+          await onSave(assetUrl, localDest, buf, false);
+        }
+      }
+      // Save without optimization
+      else {
         await onSave(assetUrl, localDest, buf, false);
       }
     });
