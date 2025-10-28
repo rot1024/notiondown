@@ -73,20 +73,28 @@ export async function downloadAssets(
       const body = await res.arrayBuffer();
 
       const ext = extname(localUrl).toLowerCase();
-      const isImage = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".tiff", ".bmp"].includes(ext);
+      // SVG is a vector format and cannot be processed by Sharp
+      const isRasterImage = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".tiff", ".bmp"].includes(ext);
 
-      if (optimize && isImage) {
-        // optimize images only
-        const optimzied = await sharp(body).rotate().webp().toBuffer();
-        if (debug) {
-          console.log(
-            "notiondown: asset: optimized",
-            localDest,
-            `${body.byteLength} bytes -> ${optimzied.length} bytes`,
-            `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,
-          );
+      if (optimize && isRasterImage) {
+        // optimize raster images only (excludes SVG and other vector formats)
+        try {
+          const optimzied = await sharp(body).rotate().webp().toBuffer();
+          if (debug) {
+            console.log(
+              "notiondown: asset: optimized",
+              localDest,
+              `${body.byteLength} bytes -> ${optimzied.length} bytes`,
+              `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,
+            );
+          }
+          await onSave(assetUrl, localDest, optimzied, true);
+        } catch (error) {
+          // If Sharp fails (e.g., unsupported format despite extension), save original
+          console.log(`notiondown: asset: optimization failed for ${localDest}, saving original:`, error instanceof Error ? error.message : error);
+          const buf = Buffer.from(body);
+          await onSave(assetUrl, localDest, buf, false);
         }
-        await onSave(assetUrl, localDest, optimzied, true);
       } else {
         const buf = Buffer.from(body);
         await onSave(assetUrl, localDest, buf, false);
