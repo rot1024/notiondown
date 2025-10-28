@@ -1,7 +1,8 @@
 import rehypeFigure from "@microflash/rehype-figure";
 import remarkEmbedder from "@remark-embedder/core";
-import type { Element, Text, Root } from "hast";
+import type { Element, Text, Root, ElementContent } from "hast";
 import { h } from "hastscript";
+import { fromHtml } from "hast-util-from-html";
 import isUrl from "is-url";
 import type { Root as MdRoot, Paragraph, PhrasingContent, Node } from "mdast";
 import rehypeExternalLinks from "rehype-external-links";
@@ -112,12 +113,20 @@ export class Md2Html {
               theme: theme,
             });
 
-            // Replace the pre element with raw HTML from Shiki
-            // Shiki generates complete <pre> with inline styles
-            Object.assign(node, {
-              type: "raw",
-              value: html,
-            });
+            // Parse Shiki's HTML and convert to Hast structure
+            const parsed = fromHtml(html, { fragment: true });
+
+            // Extract the <pre> element from parsed HTML
+            const preElement = parsed.children.find(
+              (child): child is Element =>
+                child.type === "element" && child.tagName === "pre"
+            );
+
+            if (preElement) {
+              // Replace node properties and children with Shiki's output
+              node.properties = preElement.properties;
+              node.children = preElement.children as ElementContent[];
+            }
           } catch (error) {
             // If language is not supported, keep the original code block
             console.warn(`Shiki: Language "${language}" not supported`, error);
