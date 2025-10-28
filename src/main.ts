@@ -21,6 +21,7 @@ export type MainOptions = {
   filenameTemplate?: string;
   properties?: string;
   additionalProperties?: string;
+  shikiTheme?: string;
   debug?: boolean;
   concurrency?: number;
   onlyPublished?: boolean;
@@ -201,6 +202,7 @@ export async function main(opts: MainOptions) {
     internalLink,
     properties,
     additionalProperties,
+    md2html: options.shikiTheme ? { shikiTheme: options.shikiTheme as any } : undefined,
     debug: options.debug,
     filter,
   });

@@ -7,13 +7,19 @@ import type { Root as MdRoot, Paragraph, PhrasingContent, Node } from "mdast";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeKatex from "rehype-katex";
 // import rehypeMermaid from "rehype-mermaid";
-import rehypePrism from "rehype-prism-plus";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
+import {
+  codeToHtml,
+  createHighlighter,
+  type Highlighter,
+  type BundledLanguage,
+  type BundledTheme,
+} from "shiki";
 import { type Processor, unified } from "unified";
 import { visit } from "unist-util-visit";
 
@@ -21,14 +27,24 @@ import { transformers } from "./embed.ts";
 
 export type UnifiedProcessor = Processor<any, any, any, any, any>;
 
+export interface Md2HtmlOptions {
+  /** Custom unified processor */
+  custom?: UnifiedProcessor;
+  /** Shiki theme for code highlighting (default: "github-dark") */
+  shikiTheme?: BundledTheme;
+}
+
 export class Md2Html {
   u: UnifiedProcessor;
+  private highlighter?: Highlighter;
 
-  constructor(custom?: UnifiedProcessor) {
-    if (custom) {
-      this.u = custom;
+  constructor(options?: Md2HtmlOptions) {
+    if (options?.custom) {
+      this.u = options.custom;
       return;
     }
+
+    const theme = options?.shikiTheme ?? "github-dark";
 
     const u = unified()
       .use(remarkParse)
@@ -42,7 +58,7 @@ export class Md2Html {
       .use(rehypeRaw)
       .use(rehypeKatex)
       // .use(rehypeMermaid, { strategy: "pre-mermaid" })
-      .use(rehypePrism) // put after mermaid
+      .use(() => this.rehypeShiki(theme)) // use shiki instead of prism
       .use(rehypeFigure)
       .use(autoLinkForFigcaption)
       .use(rehypeExternalLinks, {
@@ -52,6 +68,67 @@ export class Md2Html {
       .use(rehypeStringify);
 
     this.u = u;
+  }
+
+  private rehypeShiki(theme: BundledTheme) {
+    return async (tree: Root) => {
+      if (!this.highlighter) {
+        this.highlighter = await createHighlighter({
+          themes: [theme],
+          langs: [],
+        });
+      }
+
+      const promises: Promise<void>[] = [];
+
+      visit(tree, "element", (node: Element) => {
+        if (node.tagName !== "pre") return;
+
+        const codeElement = node.children.find(
+          (child): child is Element =>
+            child.type === "element" && child.tagName === "code",
+        );
+
+        if (!codeElement) return;
+
+        const className = codeElement.properties?.className as
+          | string[]
+          | undefined;
+        const languageClass = className?.find((c) =>
+          c.startsWith("language-"),
+        );
+        const language = languageClass?.replace("language-", "") ?? "text";
+
+        const codeText = codeElement.children
+          .filter((child): child is Text => child.type === "text")
+          .map((child) => child.value)
+          .join("");
+
+        const promise = (async () => {
+          try {
+            await this.highlighter!.loadLanguage(language as BundledLanguage);
+            const html = await this.highlighter!.codeToHtml(codeText, {
+              lang: language,
+              theme: theme,
+            });
+
+            // Replace the pre element with raw HTML from Shiki
+            // Shiki generates complete <pre> with inline styles
+            Object.assign(node, {
+              type: "raw",
+              value: html,
+            });
+          } catch (error) {
+            // If language is not supported, keep the original code block
+            console.warn(`Shiki: Language "${language}" not supported`, error);
+          }
+        })();
+
+        promises.push(promise);
+      });
+
+      await Promise.all(promises);
+    };
   }
 
   async process(md: string): Promise<string> {

@@ -11,7 +11,7 @@ import type {
   DatabaseFilterOptions,
   PostContent,
 } from "./interfaces";
-import { Md2Html, UnifiedProcessor } from "./md2html.ts";
+import { Md2Html, type Md2HtmlOptions, UnifiedProcessor } from "./md2html.ts";
 import { transform, type MdTransformer } from "./md2md.ts";
 import { CacheClient, type MinimalNotionClient, getAll } from "./notion/index.ts";
 import { newNotionToMarkdown } from "./notion-md/index.ts";
@@ -43,8 +43,8 @@ export type Options = {
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */
   mdTransformers?: MdTransformer[];
-  /** Overrides unified processor */
-  md2html?: UnifiedProcessor;
+  /** Options for Md2Html (markdown to HTML conversion) */
+  md2html?: Md2HtmlOptions;
   /** Advanced: override Notion client with custom one */
   client?: MinimalNotionClient;
   /** Database filter options */

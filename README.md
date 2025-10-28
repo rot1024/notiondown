@@ -2,6 +2,14 @@
 
 A CLI tool and Node.js library to convert Notion pages to markdown and HTML with cache support.
 
+## Features
+
+- **Caching**: Built-in file system cache to reduce Notion API calls
+- **Flexible Filtering**: Filter posts by publish status, dates, and tags
+- **Image & Video Optimization**: Automatic conversion to WebP and H.264/AAC formats
+- **Syntax Highlighting**: Code blocks are highlighted using [Shiki](https://shiki.style/) with support for multiple themes
+- **Customizable**: Extensive options for URL transforms, property mappings, and content processing
+
 💡 Are you looking for an Astro theme for Notion? -> [astrotion](https://github.com/rot1024/astrotion)
 
 ### Video Optimization (Optional)
@@ -53,6 +61,7 @@ Options:
   --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
   --properties <mapping>               Notion property name mappings in key=value format (e.g. slug=Slug,date=Date). Note: title is auto-detected)
   --additional-properties <properties> additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)
+  --shiki-theme <theme>                Shiki theme for code syntax highlighting (e.g. github-light, monokai, nord) (default: github-dark)
   --debug                              enable debug mode (default: false)
 
   Filter Options:
@@ -174,8 +183,13 @@ type Options = {
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */
   mdTransformers?: MdTransformer[];
-  /** Overrides unified processor */
-  md2html?: UnifiedProcessor;
+  /** Options for Md2Html (markdown to HTML conversion) */
+  md2html?: {
+    /** Custom unified processor (overrides all default processing) */
+    custom?: UnifiedProcessor;
+    /** Shiki theme for code syntax highlighting (default: "github-dark") */
+    shikiTheme?: string; // e.g., "github-light", "monokai", "nord", etc.
+  };
   /** Advanced: override Notion client with custom one */
   client?: MinimalNotionClient;
   /** Database filter options */
@@ -252,6 +266,10 @@ npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --optimize-videos "mo
 
 # Optimize all video formats including WebM and MP4
 npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --optimize-videos "all"
+
+# Customize Shiki theme for syntax highlighting
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --shiki-theme "github-light"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --shiki-theme "monokai"
 ```
 
 ### Library Examples
@@ -315,5 +333,15 @@ const clientWithAdditionalProps = new Client({
   dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
   additionalProperties: ["author", "status", "category", "priority"]
+});
+
+// Customize Shiki theme for syntax highlighting
+const clientWithCustomTheme = new Client({
+  auth: "NOTION_API_KEY",
+  dataSourceId: "DATA_SOURCE_ID",
+  cacheDir: "cache",
+  md2html: {
+    shikiTheme: "github-light" // or "monokai", "nord", "dracula", etc.
+  }
 });
 ```

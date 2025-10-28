@@ -27,6 +27,7 @@ program
   .option("--filename-template <template>", "filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day}, ${lang}, ${_lang} (default: ${slug}${_lang}.${ext})")
   .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. slug=Slug,date=Date). Note: title is auto-detected")
   .option("--additional-properties <properties>", "additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)")
+  .option("--shiki-theme <theme>", "Shiki theme for code syntax highlighting (e.g. github-light, monokai, nord)", "github-dark")
   .option("--debug", "enable debug mode", false)
   // Filter options
   .option("--only-published", "filter only published posts (Published=true)")
