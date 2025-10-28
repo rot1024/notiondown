@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import type {
-  GetDatabaseResponse,
+  GetDataSourceResponse,
   GetPageResponse,
   ListBlockChildrenResponse,
   QueryDataSourceResponse,
@@ -368,13 +368,21 @@ const blockQueryRes = (
 
 const baseClient = (lastEditedTime?: string) =>
   ({
-    databases: {
-      retrieve: vi.fn(async (): Promise<GetDatabaseResponse> => {
+    dataSources: {
+      retrieve: vi.fn(async () => {
         return {
-          object: "database",
+          object: "data_source",
           id: "databaseId",
           created_time: "2021-01-01T00:00:00.000Z",
           last_edited_time: "2021-01-01T00:00:00.000Z",
+          created_by: {
+            object: "user",
+            id: "userId",
+          },
+          last_edited_by: {
+            object: "user",
+            id: "userId",
+          },
           title: [
             {
               type: "text",
@@ -394,10 +402,21 @@ const baseClient = (lastEditedTime?: string) =>
               href: null,
             },
           ],
-        };
+          description: [],
+          is_inline: false,
+          properties: {},
+          database_parent: {
+            type: "database_id",
+            database_id: "parentDatabaseId",
+          },
+          url: "https://notion.so/databaseId",
+          archived: false,
+          public_url: null,
+          cover: null,
+          icon: null,
+          in_trash: false,
+        } satisfies GetDataSourceResponse;
       }),
-    },
-    dataSources: {
       query: vi.fn(async () => {
         return databaseQueryRes(lastEditedTime);
       }),

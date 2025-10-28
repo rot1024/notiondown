@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type {
-  GetDatabaseResponse,
+  GetDataSourceResponse,
   GetPageResponse,
   ListBlockChildrenResponse,
   QueryDataSourceResponse,
@@ -29,7 +29,7 @@ export class CacheClient {
   baseDir: string;
   debug: boolean;
   blockChildrenListCache = new Map<string, ListBlockChildrenResponse>();
-  databaseCache = new Map<string, GetDatabaseResponse>();
+  databaseCache = new Map<string, GetDataSourceResponse>();
   databaseQueryCache = new Map<string, QueryDataSourceResponse>();
   pageCache = new Map<string, GetPageResponse>();
   updatedAtMap = new Map<string, Date>();
@@ -50,26 +50,24 @@ export class CacheClient {
     }
   }
 
-  databases: MinimalNotionClient["databases"] = {
+  dataSources: MinimalNotionClient["dataSources"] = {
     retrieve: async (args) => {
-      const databaseId = args.database_id;
+      const dataSourceId = args.data_source_id;
 
-      const cache = this.databaseCache.get(databaseId);
+      const cache = this.databaseCache.get(dataSourceId);
       if (cache) {
-        this.#log("use cache: database for " + databaseId);
+        this.#log("use cache: data source for " + dataSourceId);
         return cache;
       }
 
-      this.#log("get database " + databaseId);
-      const res = await this.base.databases.retrieve(args);
+      this.#log("get data source " + dataSourceId);
+      const res = await this.base.dataSources.retrieve(args);
 
-      this.databaseCache.set(databaseId, res);
+      this.databaseCache.set(dataSourceId, res);
       await this.#writeMetaCache();
+      await this.#writeCache(`data_source-${dataSourceId}.json`, res);
       return res;
     },
-  };
-
-  dataSources: MinimalNotionClient["dataSources"] = {
     query: async (args) => {
       const databaseId = args.data_source_id;
       const key = cacheKey(databaseId, args.start_cursor);

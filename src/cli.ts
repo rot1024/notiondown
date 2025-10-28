@@ -11,7 +11,8 @@ program
   .description(pkg.description)
   .version(pkg.version)
   .requiredOption("--auth <key>", "Notion API key")
-  .requiredOption("--db <id>", "Notion database ID")
+  .option("--data-source <id>", "Notion data source ID")
+  .option("--db <id>", "[deprecated: use --data-source] Notion data source ID")
   .option("--page <id>", "Notion page ID when generating only specific page (optional)")
   .option("--output <path>", "output directory", "dist")
   .option("--assets-dir <path>", "assets directory in output dir (for images, videos, audio)", "assets")
@@ -28,7 +29,7 @@ program
   .option("--image-base-url <url>", "[deprecated: use --asset-base-url] base URL for images (e.g. https://cdn.example.com/images/)")
   .option("--internal-link-template <template>", "internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})")
   .option("--filename-template <template>", "filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day}, ${lang}, ${_lang} (default: ${slug}${_lang}.${ext})")
-  .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)")
+  .option("--properties <mapping>", "Notion property name mappings in key=value format (e.g. slug=Slug,date=Date). Note: title is auto-detected")
   .option("--additional-properties <properties>", "additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)")
   .option("--debug", "enable debug mode", false)
   // Filter options

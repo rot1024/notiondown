@@ -1,6 +1,6 @@
 import type {
-  GetDatabaseParameters,
-  GetDatabaseResponse,
+  GetDataSourceParameters,
+  GetDataSourceResponse,
   GetPageParameters,
   GetPageResponse,
   ListBlockChildrenParameters,
@@ -17,10 +17,8 @@ export type MinimalNotionClient = {
       ): Promise<ListBlockChildrenResponse>;
     };
   };
-  databases: {
-    retrieve: (args: GetDatabaseParameters) => Promise<GetDatabaseResponse>;
-  };
   dataSources: {
+    retrieve: (args: GetDataSourceParameters) => Promise<GetDataSourceResponse>;
     query(args: QueryDataSourceParameters): Promise<QueryDataSourceResponse>;
   };
   pages: {

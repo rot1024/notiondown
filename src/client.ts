@@ -19,8 +19,10 @@ import { type BlockType, type NotionBlockTransformer as NotionMdTransformer } fr
 import { buildDatabaseFilter } from "./utils.ts";
 
 export type Options = {
-  /** Notion database ID */
-  databaseId: string;
+  /** Notion data source ID (database ID) */
+  dataSourceId?: string;
+  /** @deprecated Use dataSourceId instead. Notion database ID */
+  databaseId?: string;
   /** Notion API key. It should be set until the custom client is provided. */
   auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
@@ -73,8 +75,10 @@ export class Client implements ClientType {
   filter: DatabaseFilterOptions;
 
   constructor(options: Options) {
-    if (!options.databaseId) {
-      throw new Error("client and databaseId must be set");
+    // Handle backward compatibility for databaseId -> dataSourceId
+    const dataSourceId = options.dataSourceId || options.databaseId;
+    if (!dataSourceId) {
+      throw new Error("dataSourceId (or databaseId) must be set");
     }
 
     if (!options.client) {
@@ -88,7 +92,7 @@ export class Client implements ClientType {
 
       this.cacheClient = new CacheClient({
         base: rawClient,
-        databaseId: options.databaseId,
+        databaseId: dataSourceId,
         useFs: true,
         debug: !!options.debug,
         baseDir: options.cacheDir,
@@ -101,7 +105,7 @@ export class Client implements ClientType {
       this.client = options.client;
     }
 
-    this.databaseId = options.databaseId;
+    this.databaseId = dataSourceId;
     this.debug = options.debug || false;
     this.cacheDir = options.cacheDir;
     // Handle backward compatibility for imageDir -> assetsDir
@@ -171,8 +175,8 @@ export class Client implements ClientType {
   }
 
   async getDatabase(): Promise<Database> {
-    const res = await this.client.databases.retrieve({
-      database_id: this.databaseId,
+    const res = await this.client.dataSources.retrieve({
+      data_source_id: this.databaseId,
     });
     return buildDatabase(res, this.assetsDir);
   }

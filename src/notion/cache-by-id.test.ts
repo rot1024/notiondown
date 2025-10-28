@@ -17,10 +17,26 @@ describe("CacheClient purgeCacheById", () => {
   beforeEach(async () => {
     // Setup mock client
     mockClient = {
-      databases: {
-        retrieve: async () => ({ id: "db1", title: [{ plain_text: "Test" }] }) as any,
-      },
       dataSources: {
+        retrieve: async () => ({
+          object: "data_source",
+          id: "db1",
+          created_time: "2021-01-01T00:00:00.000Z",
+          last_edited_time: "2021-01-01T00:00:00.000Z",
+          created_by: { object: "user", id: "user1" },
+          last_edited_by: { object: "user", id: "user1" },
+          title: [{ type: "text", text: { content: "Test", link: null }, plain_text: "Test", href: null, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: "default" } }],
+          description: [],
+          is_inline: false,
+          properties: {},
+          database_parent: { type: "database_id", database_id: "parent" },
+          url: "https://notion.so/db1",
+          archived: false,
+          public_url: null,
+          cover: null,
+          icon: null,
+          in_trash: false,
+        }),
         query: async () => emptyDb,
       },
       blocks: {

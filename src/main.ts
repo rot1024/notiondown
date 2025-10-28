@@ -5,7 +5,8 @@ import type { Post, DatabaseFilterOptions } from "./interfaces.ts";
 
 export type MainOptions = {
   auth: string;
-  db: string;
+  dataSource?: string;
+  db?: string; // deprecated, use dataSource
   page?: string;
   output?: string;
   assetsDir?: string;
@@ -50,12 +51,17 @@ const DEFAULT_OPTIONS = {
   optimizeAssets: true,
   debug: false,
   filenameTemplate: "${slug}${_lang}.${ext}",
-} satisfies Omit<MainOptions, "db" | "auth" | "imageDir" | "downloadImages" | "optimizeImages" | "imageBaseUrl">;
+} satisfies Omit<MainOptions, "db" | "dataSource" | "auth" | "imageDir" | "downloadImages" | "optimizeImages" | "imageBaseUrl">;
 
 export async function main(opts: MainOptions) {
   const options = { ...DEFAULT_OPTIONS, ...opts };
 
   // Handle backward compatibility for deprecated options
+  const dataSourceId = options.dataSource || options.db;
+  if (!dataSourceId) {
+    throw new Error("dataSource (or db) must be set");
+  }
+
   const assetsDir = options.assetsDir || options.imageDir || DEFAULT_OPTIONS.assetsDir;
   const shouldDownloadAssets = options.downloadAssets ?? options.downloadImages ?? DEFAULT_OPTIONS.downloadAssets;
   const optimizeAssets = options.optimizeAssets ?? options.optimizeImages ?? DEFAULT_OPTIONS.optimizeAssets;
@@ -183,7 +189,7 @@ export async function main(opts: MainOptions) {
   };
 
   const client = new Client({
-    databaseId: options.db,
+    dataSourceId,
     auth: options.auth,
     cacheDir: options.cache ? options.cacheDir : undefined,
     assetsDir,

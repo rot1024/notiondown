@@ -14,7 +14,7 @@ npx notiondown --auth API_KEY --db DATABASE_ID
 Options:
   -V, --version                        output the version number
   --auth <key>                         Notion API key
-  --db <id>                            Notion database ID
+  --data-source <id>                   Notion data source ID
   --page <id>                          Notion page ID when generating only specific page (optional)
   --output <path>                      output directory (default: "dist")
   --assets-dir <path>                  assets directory in output dir for images, videos, audio (default: "assets")
@@ -27,7 +27,7 @@ Options:
   --asset-base-url <url>               base URL for assets (e.g. https://cdn.example.com/assets/)
   --internal-link-template <template>  internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})
   --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
-  --properties <mapping>               Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)
+  --properties <mapping>               Notion property name mappings in key=value format (e.g. slug=Slug,date=Date). Note: title is auto-detected)
   --additional-properties <properties> additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)
   --debug                              enable debug mode (default: false)
 

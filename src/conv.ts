@@ -1,6 +1,6 @@
 import type {
   DatabaseObjectResponse,
-  GetDatabaseResponse,
+  GetDataSourceResponse,
   PageObjectResponse,
   PartialDatabaseObjectResponse,
   PartialPageObjectResponse,
@@ -11,8 +11,6 @@ import { type Properties } from "./notion/index.ts";
 import { fileUrlToAssetUrl } from "./utils.ts";
 
 export type PropertyNames = {
-  /** Title property (title, default: Title) */
-  title?: string;
   /** Slug property (text, default: Slug) */
   slug?: string;
   /** Published property (checkbox, default: Published) */
@@ -36,7 +34,6 @@ export type PropertyNames = {
 };
 
 export const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
-  title: "Title",
   slug: "Slug",
   date: "Date",
   published: "Published",
@@ -50,7 +47,6 @@ export const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
 };
 
 const propertyTypes: Record<keyof PropertyNames, string> = {
-  title: "title",
   slug: "rich_text",
   published: "checkbox",
   date: "date",
@@ -63,7 +59,7 @@ const propertyTypes: Record<keyof PropertyNames, string> = {
   lang: "select",
 }
 
-export function buildDatabase(res: GetDatabaseResponse, dir?: string): Database {
+export function buildDatabase(res: GetDataSourceResponse, dir?: string): Database {
   if (!("title" in res)) throw new Error("invalid database");
 
   const { url: iconUrl } = getUrlFromIconAndCover(res.icon) ?? {};
@@ -97,10 +93,16 @@ export function isValidPage(
   const properties = "properties" in p ? p.properties : null;
   if (!properties) return false;
 
-  const titleProp = properties[names.title];
-  if (!titleProp || titleProp.type !== "title" || titleProp.title.length === 0) {
+  // Auto-detect title property by finding any property with type "title"
+  const titleEntry = Object.entries(properties).find(
+    ([_, prop]) => prop.type === "title" && prop.title.length > 0
+  );
+
+  if (!titleEntry) {
     if (debug) {
       console.warn("notiondown: page does not have a valid title property");
+      console.warn("notiondown: available properties:", Object.keys(properties));
+      console.warn("notiondown: no property with type 'title' found");
     }
     return false;
   }
@@ -155,7 +157,11 @@ export function buildPost(
   const updatedAtProp = properties[names.updatedAt];
   const langProp = properties[names.lang];
 
-  const title = getRichText(properties[names.title]);
+  // Auto-detect title property by finding any property with type "title"
+  const titleEntry = Object.entries(properties).find(
+    ([_, prop]) => prop.type === "title"
+  );
+  const title = titleEntry ? getRichText(titleEntry[1]) : "";
   const slugText = getRichText(properties[names.slug]);
 
   // Use title as slug fallback if slug is empty
