@@ -4,10 +4,10 @@ import path from "node:path";
 import { CacheClient } from "./cache.ts";
 import type { MinimalNotionClient } from "./minimal.ts";
 import { type ListBlockChildrenResponse } from "@notionhq/client";
-import { type QueryDatabaseResponse } from "@notionhq/client/build/src/api-endpoints";
+import { type QueryDataSourceResponse } from "@notionhq/client/build/src/api-endpoints";
 
 const emptyListBlock: ListBlockChildrenResponse = {} as any;
-const emptyDb: QueryDatabaseResponse = {} as any;
+const emptyDb: QueryDataSourceResponse = {} as any;
 
 describe("CacheClient purgeCacheById", () => {
   const testDir = "./test-cache";
@@ -18,8 +18,10 @@ describe("CacheClient purgeCacheById", () => {
     // Setup mock client
     mockClient = {
       databases: {
-        query: async () => emptyDb,
         retrieve: async () => ({ id: "db1", title: [{ plain_text: "Test" }] }) as any,
+      },
+      dataSources: {
+        query: async () => emptyDb,
       },
       blocks: {
         children: {

@@ -261,9 +261,10 @@ function extractPropertyValue(prop: Properties): any {
           return { type: "external", url: file.external.url, name: file.name };
         } else if (file.type === "file") {
           return { type: "file", url: file.file.url, expiry_time: file.file.expiry_time, name: file.name };
-        } else {
-          return { type: "unknown", name: file.name };
         }
+        // TypeScript exhaustiveness check - should never reach here
+        const _exhaustiveCheck: never = file;
+        return { type: "unknown", name: undefined };
       });
     case "relation":
       return prop.relation.map(rel => ({ id: rel.id }));

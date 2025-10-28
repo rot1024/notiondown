@@ -1,6 +1,6 @@
 import { extname, join } from "node:path";
 import { DatabaseFilterOptions } from "./interfaces";
-import { QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
+import { QueryDataSourceParameters } from "@notionhq/client/build/src/api-endpoints";
 import { PropertyNames } from "./conv";
 
 export function fileUrlToAssetUrl(
@@ -44,7 +44,7 @@ function isUnsplash(url: URL): boolean {
   return url.hostname === "images.unsplash.com";
 }
 
-export function buildDatabaseFilter(filter: DatabaseFilterOptions, properties: PropertyNames): QueryDatabaseParameters["filter"] {
+export function buildDatabaseFilter(filter: DatabaseFilterOptions, properties: PropertyNames): QueryDataSourceParameters["filter"] {
   const filters: any[] = [];
 
   // Published filter

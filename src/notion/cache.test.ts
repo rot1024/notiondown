@@ -6,7 +6,7 @@ import type {
   GetDatabaseResponse,
   GetPageResponse,
   ListBlockChildrenResponse,
-  QueryDatabaseResponse,
+  QueryDataSourceResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import { expect, test, vi } from "vitest";
 
@@ -26,8 +26,8 @@ test("CacheClient", async () => {
   await client1.loadCache();
 
   // get pages
-  const db1_1 = await client1.databases.query({
-    database_id: "databaseId",
+  const db1_1 = await client1.dataSources.query({
+    data_source_id: "databaseId",
   });
   expect(db1_1).toEqual(databaseQueryRes());
 
@@ -35,12 +35,13 @@ test("CacheClient", async () => {
     await fs.promises.readFile(path.join(tmp, "meta.json"), "utf-8"),
   );
   expect(meta1_1).toEqual({
+    version: 2,
     updatedAt: {
       pageId: "2021-01-01T00:00:00.000Z",
     },
     parents: {},
   });
-  expect(base1.databases.query).toHaveBeenCalledTimes(1);
+  expect(base1.dataSources.query).toHaveBeenCalledTimes(1);
 
   // get blocks
   const blocks1_1 = await client1.blocks.children.list({
@@ -53,6 +54,7 @@ test("CacheClient", async () => {
     await fs.promises.readFile(path.join(tmp, "meta.json"), "utf-8"),
   );
   expect(meta1_2).toEqual({
+    version: 2,
     updatedAt: {
       pageId: "2021-01-01T00:00:00.000Z",
     },
@@ -81,6 +83,7 @@ test("CacheClient", async () => {
     await fs.promises.readFile(path.join(tmp, "meta.json"), "utf-8"),
   );
   expect(meta1_3).toEqual({
+    version: 2,
     updatedAt: {
       pageId: "2021-01-01T00:00:00.000Z",
     },
@@ -105,11 +108,11 @@ test("CacheClient", async () => {
   client2.base = base2;
 
   // get pages again
-  const db2 = await client2.databases.query({
-    database_id: "databaseId",
+  const db2 = await client2.dataSources.query({
+    data_source_id: "databaseId",
   });
   expect(db2).toEqual(databaseQueryRes());
-  expect(base2.databases.query).toHaveBeenCalledTimes(0); // not called
+  expect(base2.dataSources.query).toHaveBeenCalledTimes(0); // not called
 
   // get blocks again 1
   const blocks2_1 = await client1.blocks.children.list({
@@ -150,11 +153,11 @@ test("CacheClient", async () => {
   await client3.loadCache();
 
   // get pages again
-  const db3 = await client3.databases.query({
-    database_id: "databaseId",
+  const db3 = await client3.dataSources.query({
+    data_source_id: "databaseId",
   });
   expect(db3).toEqual(databaseQueryRes());
-  expect(base3.databases.query).toHaveBeenCalledTimes(1);
+  expect(base3.dataSources.query).toHaveBeenCalledTimes(1);
 
   // get blocks again 1
   const blocks3_1 = await client3.blocks.children.list({
@@ -182,11 +185,11 @@ test("CacheClient", async () => {
     baseDir: tmp,
   });
 
-  const db4 = await client4.databases.query({
-    database_id: "databaseId",
+  const db4 = await client4.dataSources.query({
+    data_source_id: "databaseId",
   });
   expect(db4).toEqual(databaseQueryRes(newLastEditedTime));
-  expect(base4.databases.query).toHaveBeenCalledTimes(1);
+  expect(base4.dataSources.query).toHaveBeenCalledTimes(1);
 
   const blocks4_1 = await client4.blocks.children.list({
     block_id: "pageId",
@@ -210,8 +213,8 @@ test("allChildrenIds", async () => {
     useFs: false,
     baseDir: tmp,
   });
-  await client.databases.query({
-    database_id: "databaseId",
+  await client.dataSources.query({
+    data_source_id: "databaseId",
   });
   await client.blocks.children.list({
     block_id: "pageId",
@@ -223,6 +226,64 @@ test("allChildrenIds", async () => {
   expect(client.allChildrenIds("pageId")).toEqual(["blockId", "blockId2"]);
 });
 
+test("Cache migration from v1 to v2", async () => {
+  const tmp = await tmpdir();
+  const base = baseClient();
+
+  // Create v1 cache (without version field)
+  await fs.promises.mkdir(tmp, { recursive: true });
+  await fs.promises.writeFile(
+    path.join(tmp, "meta.json"),
+    JSON.stringify({
+      updatedAt: {
+        pageId: "2021-01-01T00:00:00.000Z",
+      },
+      parents: {},
+      // No version field - this is v1
+    })
+  );
+
+  await fs.promises.writeFile(
+    path.join(tmp, "blocks-pageId.json"),
+    JSON.stringify(blockQueryRes())
+  );
+
+  const client = new CacheClient({
+    base,
+    databaseId: "databaseId",
+    useFs: true,
+    baseDir: tmp,
+    debug: true,
+  });
+
+  await client.loadCache();
+
+  // First, query the database to populate updatedAtMap
+  await client.dataSources.query({
+    data_source_id: "databaseId",
+  });
+
+  // Now verify that blocks cache is used (not fetching from base)
+  const blocks = await client.blocks.children.list({
+    block_id: "pageId",
+  });
+  expect(blocks).toEqual(blockQueryRes());
+  // Should use cached blocks since updatedAt matches cacheUpdatedAt
+  expect(base.blocks.children.list).toHaveBeenCalledTimes(0);
+
+  // Verify that meta.json was updated to v2
+  const meta = JSON.parse(
+    await fs.promises.readFile(path.join(tmp, "meta.json"), "utf-8")
+  );
+  expect(meta.version).toBe(2);
+  expect(meta.updatedAt).toEqual({
+    pageId: "2021-01-01T00:00:00.000Z",
+  });
+
+  // Clean up
+  await fs.promises.rm(tmp, { recursive: true });
+});
+
 function tmpdir(): Promise<string> {
   return fs.promises.mkdtemp(path.join(os.tmpdir(), "notiondown-test-"));
 }
@@ -231,12 +292,12 @@ const defaultLastEditedTime = "2021-01-01T00:00:00.000Z";
 
 const databaseQueryRes = (
   last_edited_time: string = defaultLastEditedTime,
-): QueryDatabaseResponse => ({
+): QueryDataSourceResponse => ({
   object: "list",
   next_cursor: null,
   has_more: false,
-  type: "page_or_database",
-  page_or_database: {},
+  type: "page_or_data_source",
+  page_or_data_source: {},
   results: [
     {
       archived: false,
@@ -308,9 +369,6 @@ const blockQueryRes = (
 const baseClient = (lastEditedTime?: string) =>
   ({
     databases: {
-      query: vi.fn(async () => {
-        return databaseQueryRes(lastEditedTime);
-      }),
       retrieve: vi.fn(async (): Promise<GetDatabaseResponse> => {
         return {
           object: "database",
@@ -336,8 +394,12 @@ const baseClient = (lastEditedTime?: string) =>
               href: null,
             },
           ],
-          properties: {},
         };
+      }),
+    },
+    dataSources: {
+      query: vi.fn(async () => {
+        return databaseQueryRes(lastEditedTime);
       }),
     },
     blocks: {
@@ -360,7 +422,7 @@ const baseClient = (lastEditedTime?: string) =>
           properties: {},
           parent: {
             type: "database_id",
-            database_id: "databaseId",
+            data_source_id: "databaseId",
           },
         } as GetPageResponse;
       }),

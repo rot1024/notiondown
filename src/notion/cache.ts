@@ -5,11 +5,14 @@ import type {
   GetDatabaseResponse,
   GetPageResponse,
   ListBlockChildrenResponse,
-  QueryDatabaseResponse,
+  QueryDataSourceResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
 import type { MinimalNotionClient } from "./minimal.ts";
 import { getLastEditedTime } from "./utils.ts";
+
+// Cache version - increment when cache format changes
+const CACHE_VERSION = 2; // v2: Changed from databases.query to dataSources.query
 
 export type Options = {
   base: MinimalNotionClient;
@@ -27,7 +30,7 @@ export class CacheClient {
   debug: boolean;
   blockChildrenListCache = new Map<string, ListBlockChildrenResponse>();
   databaseCache = new Map<string, GetDatabaseResponse>();
-  databaseQueryCache = new Map<string, QueryDatabaseResponse>();
+  databaseQueryCache = new Map<string, QueryDataSourceResponse>();
   pageCache = new Map<string, GetPageResponse>();
   updatedAtMap = new Map<string, Date>();
   cacheUpdatedAtMap = new Map<string, Date>();
@@ -48,30 +51,6 @@ export class CacheClient {
   }
 
   databases: MinimalNotionClient["databases"] = {
-    query: async (args) => {
-      const databaseId = args.database_id;
-      const key = cacheKey(databaseId, args.start_cursor);
-
-      const cache = this.databaseQueryCache.get(key);
-      if (cache) {
-        this.#log("use cache: database query for " + key);
-        return cache;
-      }
-
-      this.#log("query databases " + key);
-      const res = await this.base.databases.query(args);
-      this.databaseQueryCache.set(key, res);
-
-      for (const p of res.results) {
-        const lastEditedTime = getLastEditedTime(p);
-        if (lastEditedTime) {
-          this.updatedAtMap.set(p.id, lastEditedTime);
-        }
-      }
-
-      await this.#writeMetaCache();
-      return res;
-    },
     retrieve: async (args) => {
       const databaseId = args.database_id;
 
@@ -85,6 +64,36 @@ export class CacheClient {
       const res = await this.base.databases.retrieve(args);
 
       this.databaseCache.set(databaseId, res);
+      await this.#writeMetaCache();
+      return res;
+    },
+  };
+
+  dataSources: MinimalNotionClient["dataSources"] = {
+    query: async (args) => {
+      const databaseId = args.data_source_id;
+      const key = cacheKey(databaseId, args.start_cursor);
+
+      const cache = this.databaseQueryCache.get(key);
+      if (cache) {
+        this.#log("use cache: data source query for " + key);
+        return cache;
+      }
+
+      this.#log("query data sources " + key);
+      const res = await this.base.dataSources.query(args);
+      this.databaseQueryCache.set(key, res);
+
+      for (const p of res.results) {
+        // Only process pages, not data sources
+        if (p.object === "page") {
+          const lastEditedTime = getLastEditedTime(p);
+          if (lastEditedTime) {
+            this.updatedAtMap.set(p.id, lastEditedTime);
+          }
+        }
+      }
+
       await this.#writeMetaCache();
       return res;
     },
@@ -149,26 +158,72 @@ export class CacheClient {
   async loadCache(): Promise<void> {
     if (!this.useFs) return;
 
-    const dir = await fs.promises.readdir(this.baseDir);
-    for (const file of dir) {
-      if (
-        !file.endsWith(".json") ||
-        (!file.startsWith("blocks-") && file !== "meta.json")
-      )
-        continue;
+    try {
+      const dir = await fs.promises.readdir(this.baseDir);
 
-      const data = await this.#readCache(file);
-      if (file.startsWith("blocks-")) {
+      // Check cache version first
+      if (dir.includes("meta.json")) {
+        const meta = await this.#readCache("meta.json");
+        const cacheVersion = meta.version || 1; // Default to v1 for old caches
+
+        // Load meta data first (needed for migration and cache validation)
+        const { updatedAt, parents } = meta;
+        if (updatedAt) {
+          this.cacheUpdatedAtMap = new Map(
+            Object.entries(updatedAt).map(([k, v]) => [k, new Date(String(v))]),
+          );
+        }
+        if (parents) {
+          this.parentMap = new Map(Object.entries(parents));
+        }
+
+        // Then check version and migrate if needed
+        if (cacheVersion < CACHE_VERSION) {
+          this.#log(`Cache version outdated (found: ${cacheVersion}, expected: ${CACHE_VERSION}). Migrating cache.`);
+          await this.#migrateCache(cacheVersion);
+        } else if (cacheVersion > CACHE_VERSION) {
+          this.#log(`Cache version newer than expected (found: ${cacheVersion}, expected: ${CACHE_VERSION}). Purging cache.`);
+          await this.purgeCache();
+          return;
+        }
+      }
+
+      // Load block caches
+      for (const file of dir) {
+        if (!file.endsWith(".json") || !file.startsWith("blocks-")) {
+          continue;
+        }
+
+        const data = await this.#readCache(file);
         const key = file.replace("blocks-", "").replace(".json", "");
         this.blockChildrenListCache.set(key, data);
-      } else if (file.startsWith("meta")) {
-        const { updatedAt, parents } = data;
-        this.cacheUpdatedAtMap = new Map(
-          Object.entries(updatedAt).map(([k, v]) => [k, new Date(String(v))]),
-        );
-        this.parentMap = new Map(Object.entries(parents));
       }
+    } catch (error) {
+      this.#log("Failed to load cache:", error);
+      // If loading fails, purge and start fresh
+      await this.purgeCache();
     }
+  }
+
+  async #migrateCache(fromVersion: number): Promise<void> {
+    this.#log(`Migrating cache from v${fromVersion} to v${CACHE_VERSION}`);
+
+    if (fromVersion === 1) {
+      // v1 -> v2 migration:
+      // The main change is databases.query -> dataSources.query
+      // We don't cache database query results in files, only in memory,
+      // so we just need to clear the in-memory cache and update the version.
+      // Block caches and meta data remain compatible.
+
+      this.databaseQueryCache.clear();
+      this.#log("Cleared database query cache (incompatible with v2 dataSources.query)");
+
+      // Update meta.json with new version
+      await this.#writeMetaCache();
+      this.#log("Updated cache version to v2");
+    }
+
+    // Add more migration logic here for future versions
   }
 
   async purgeCache(): Promise<void> {
@@ -287,6 +342,7 @@ export class CacheClient {
   async #writeMetaCache(): Promise<void> {
     if (!this.useFs) return;
     await this.#writeCache(`meta.json`, {
+      version: CACHE_VERSION,
       updatedAt: Object.fromEntries(this.updatedAtMap),
       parents: Object.fromEntries(this.parentMap),
     });

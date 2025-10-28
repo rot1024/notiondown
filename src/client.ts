@@ -1,4 +1,4 @@
-import type { QueryDatabaseParameters } from "@notionhq/client/build/src/api-endpoints";
+import type { QueryDataSourceParameters, PageObjectResponse, PartialPageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { NotionToMarkdown } from "notion-to-md";
 import { Client as RawClient } from "@notionhq/client";
 
@@ -179,8 +179,8 @@ export class Client implements ClientType {
 
   async getAllPosts(): Promise<Post[]> {
     const filter = buildDatabaseFilter(this.filter, this.properties);
-    const params: QueryDatabaseParameters = {
-      database_id: this.databaseId,
+    const params: QueryDataSourceParameters = {
+      data_source_id: this.databaseId,
       filter,
       sorts: [
         {
@@ -192,17 +192,20 @@ export class Client implements ClientType {
     };
 
     if (this.debug) {
-      console.log("notiondown: querying database with params:", JSON.stringify(params, null, 2));
+      console.log("notiondown: querying data source with params:", JSON.stringify(params, null, 2));
     }
 
     const results = await getAll((cursor) =>
-      this.client.databases.query({
+      this.client.dataSources.query({
         ...params,
         start_cursor: cursor,
       }),
     );
 
-    const posts = results
+    // Filter out data sources and keep only pages
+    const pages = results.filter(p => p.object === "page");
+
+    const posts = pages
       .filter(p => isValidPage(p, this.properties, this.debug))
       .map(p =>  buildPost(p, this.assetsDir, this.properties, this.additionalProperties));
 
