@@ -72,9 +72,11 @@ export async function downloadAssets(
 
       const body = await res.arrayBuffer();
 
-      const ext = extname(localUrl);
-      if (optimize && ext === ".webp") {
-        // optimize images
+      const ext = extname(localUrl).toLowerCase();
+      const isImage = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".tiff", ".bmp"].includes(ext);
+
+      if (optimize && isImage) {
+        // optimize images only
         const optimzied = await sharp(body).rotate().webp().toBuffer();
         if (debug) {
           console.log(
