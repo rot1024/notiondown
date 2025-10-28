@@ -7,7 +7,7 @@ A CLI tool and Node.js library to convert Notion pages to markdown and HTML with
 ## Usage (CLI)
 
 ```
-npx notiondown --auth API_KEY --db DATABASE_ID
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID
 ```
 
 ```
@@ -50,14 +50,14 @@ import { Client } from "notiondown";
 
 const client = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
 });
 
 // With custom URL transforms and templates
 const customClient = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
   assetUrlTransform: (filename) => `https://cdn.myblog.com/assets/${filename}`,
   internalLink: (post) => `https://myblog.com/posts/${post.slug || post.id}`,
@@ -92,8 +92,8 @@ for (const post of posts) {
 
 ```ts
 type Options = {
-  /** Notion database ID */
-  databaseId: string;
+  /** Notion data source ID (database ID) */
+  dataSourceId: string;
   /** Notion API key. It should be set until the custom client is provided. */
   auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
@@ -171,40 +171,40 @@ type DatabaseFilterOptions = {
 
 ```bash
 # Get all posts (no filters applied by default)
-npx notiondown --auth API_KEY --db DATABASE_ID
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID
 
 # Get only published posts
-npx notiondown --auth API_KEY --db DATABASE_ID --only-published
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --only-published
 
 # Get posts with specific tags
-npx notiondown --auth API_KEY --db DATABASE_ID --tags "tech,programming"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --tags "tech,programming"
 
 # Get posts with all specified tags
-npx notiondown --auth API_KEY --db DATABASE_ID --tags-all "featured,published"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --tags-all "featured,published"
 
 # Get published posts before the current date
-npx notiondown --auth API_KEY --db DATABASE_ID --only-published --date-before now
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --only-published --date-before now
 
 # Get posts excluding specific tags
-npx notiondown --auth API_KEY --db DATABASE_ID --exclude-tags "draft,private"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --exclude-tags "draft,private"
 
 # Complex filtering: published tech posts from 2024
-npx notiondown --auth API_KEY --db DATABASE_ID --only-published --tags "tech" --date-after "2024-01-01"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --only-published --tags "tech" --date-after "2024-01-01"
 
 # Custom property names with filtering
-npx notiondown --auth API_KEY --db DATABASE_ID --properties "published=IsPublished,tags=Categories" --only-published --tags "tech"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --properties "published=IsPublished,tags=Categories" --only-published --tags "tech"
 
 # Include additional properties in meta.json output
-npx notiondown --auth API_KEY --db DATABASE_ID --additional-properties "author,status,category,priority"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --additional-properties "author,status,category,priority"
 
 # Custom filename template (organize by year/month)
-npx notiondown --auth API_KEY --db DATABASE_ID --filename-template "${year}/${month}/${slug}.${ext}"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --filename-template "${year}/${month}/${slug}.${ext}"
 
 # Custom internal link template for blog posts
-npx notiondown --auth API_KEY --db DATABASE_ID --internal-link-template "https://myblog.com/posts/${slug}"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --internal-link-template "https://myblog.com/posts/${slug}"
 
 # Using asset base URL for CDN
-npx notiondown --auth API_KEY --db DATABASE_ID --asset-base-url "https://cdn.myblog.com/assets/"
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --asset-base-url "https://cdn.myblog.com/assets/"
 ```
 
 ### Library Examples
@@ -215,14 +215,14 @@ import { Client } from "notiondown";
 // Default: no filters applied (gets all posts)
 const client = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache"
 });
 
 // Basic filtering: only published posts from 2024
 const publishedClient = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
   filter: {
     published: { enabled: true, property: "Published", value: true },
@@ -237,7 +237,7 @@ const publishedClient = new Client({
 // Tag filtering: posts with "tech" OR "programming" tags
 const techClient = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
   filter: {
     tags: {
@@ -251,7 +251,7 @@ const techClient = new Client({
 // Advanced filtering: featured posts only, excluding drafts
 const featuredClient = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
   filter: {
     tags: {
@@ -265,7 +265,7 @@ const featuredClient = new Client({
 // Include additional properties in post data
 const clientWithAdditionalProps = new Client({
   auth: "NOTION_API_KEY",
-  databaseId: "DATABASE_ID",
+  dataSourceId: "DATA_SOURCE_ID",
   cacheDir: "cache",
   additionalProperties: ["author", "status", "category", "priority"]
 });

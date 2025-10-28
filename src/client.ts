@@ -20,21 +20,15 @@ import { buildDatabaseFilter } from "./utils.ts";
 
 export type Options = {
   /** Notion data source ID (database ID) */
-  dataSourceId?: string;
-  /** @deprecated Use dataSourceId instead. Notion database ID */
-  databaseId?: string;
+  dataSourceId: string;
   /** Notion API key. It should be set until the custom client is provided. */
   auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
   cacheDir?: string;
   /** Relative path to assets directory, used for asset URLs (images, videos, audio) in markdown. Defaults to "assets". */
   assetsDir?: string;
-  /** @deprecated Use assetsDir instead. Relative path to image directory. */
-  imageDir?: string;
   /** Transform function for asset URLs (images, videos, audio). Takes filename and returns the desired URL. */
   assetUrlTransform?: (filename: string) => string;
-  /** @deprecated Use assetUrlTransform instead. Transform function for image URLs. */
-  imageUrlTransform?: (filename: string) => string;
   /** Render markdown to HTML. Defaults to true. */
   renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
@@ -75,10 +69,8 @@ export class Client implements ClientType {
   filter: DatabaseFilterOptions;
 
   constructor(options: Options) {
-    // Handle backward compatibility for databaseId -> dataSourceId
-    const dataSourceId = options.dataSourceId || options.databaseId;
-    if (!dataSourceId) {
-      throw new Error("dataSourceId (or databaseId) must be set");
+    if (!options.dataSourceId) {
+      throw new Error("dataSourceId must be set");
     }
 
     if (!options.client) {
@@ -92,7 +84,7 @@ export class Client implements ClientType {
 
       this.cacheClient = new CacheClient({
         base: rawClient,
-        databaseId: dataSourceId,
+        databaseId: options.dataSourceId,
         useFs: true,
         debug: !!options.debug,
         baseDir: options.cacheDir,
@@ -105,13 +97,11 @@ export class Client implements ClientType {
       this.client = options.client;
     }
 
-    this.databaseId = dataSourceId;
+    this.databaseId = options.dataSourceId;
     this.debug = options.debug || false;
     this.cacheDir = options.cacheDir;
-    // Handle backward compatibility for imageDir -> assetsDir
-    this.assetsDir = options.assetsDir || options.imageDir || "assets";
-    // Handle backward compatibility for imageUrlTransform -> assetUrlTransform
-    this.assetUrlTransform = options.assetUrlTransform || options.imageUrlTransform;
+    this.assetsDir = options.assetsDir || "assets";
+    this.assetUrlTransform = options.assetUrlTransform;
     this.renderHtml = options.renderHtml ?? true;
     this.properties = { ...DEFAULT_PROPERTY_NAMES, ...options.properties };
     this.additionalProperties = options.additionalProperties || [];

@@ -5,22 +5,17 @@ import type { Post, DatabaseFilterOptions } from "./interfaces.ts";
 
 export type MainOptions = {
   auth: string;
-  dataSource?: string;
-  db?: string; // deprecated, use dataSource
+  dataSource: string;
   page?: string;
   output?: string;
   assetsDir?: string;
-  imageDir?: string; // deprecated, use assetsDir
   cacheDir?: string;
   format?: string;
   frontmatter?: boolean;
   cache?: boolean;
   downloadAssets?: boolean | "always";
-  downloadImages?: boolean | "always"; // deprecated, use downloadAssets
   optimizeAssets?: boolean;
-  optimizeImages?: boolean; // deprecated, use optimizeAssets
   assetBaseUrl?: string;
-  imageBaseUrl?: string; // deprecated, use assetBaseUrl
   internalLinkTemplate?: string;
   filenameTemplate?: string;
   properties?: string;
@@ -51,23 +46,12 @@ const DEFAULT_OPTIONS = {
   optimizeAssets: true,
   debug: false,
   filenameTemplate: "${slug}${_lang}.${ext}",
-} satisfies Omit<MainOptions, "db" | "dataSource" | "auth" | "imageDir" | "downloadImages" | "optimizeImages" | "imageBaseUrl">;
+} satisfies Omit<MainOptions, "dataSource" | "auth">;
 
 export async function main(opts: MainOptions) {
   const options = { ...DEFAULT_OPTIONS, ...opts };
 
-  // Handle backward compatibility for deprecated options
-  const dataSourceId = options.dataSource || options.db;
-  if (!dataSourceId) {
-    throw new Error("dataSource (or db) must be set");
-  }
-
-  const assetsDir = options.assetsDir || options.imageDir || DEFAULT_OPTIONS.assetsDir;
-  const shouldDownloadAssets = options.downloadAssets ?? options.downloadImages ?? DEFAULT_OPTIONS.downloadAssets;
-  const optimizeAssets = options.optimizeAssets ?? options.optimizeImages ?? DEFAULT_OPTIONS.optimizeAssets;
-  const assetBaseUrl = options.assetBaseUrl || options.imageBaseUrl;
-
-  const assetsDownloadDir = join(options.output, assetsDir);
+  const assetsDownloadDir = join(options.output, options.assetsDir);
   const format = options.format.split(",").map((f) => f.trim());
 
   // Parse property mappings
@@ -137,10 +121,10 @@ export async function main(opts: MainOptions) {
 
   // Create asset URL transform function if base URL is provided
   let assetUrlTransform: ((filename: string) => string) | undefined;
-  if (assetBaseUrl) {
-    const baseUrl = assetBaseUrl.endsWith('/')
-      ? assetBaseUrl
-      : assetBaseUrl + '/';
+  if (options.assetBaseUrl) {
+    const baseUrl = options.assetBaseUrl.endsWith('/')
+      ? options.assetBaseUrl
+      : options.assetBaseUrl + '/';
     assetUrlTransform = (filename: string) => baseUrl + filename;
   }
 
@@ -189,10 +173,10 @@ export async function main(opts: MainOptions) {
   };
 
   const client = new Client({
-    dataSourceId,
+    dataSourceId: options.dataSource,
     auth: options.auth,
     cacheDir: options.cache ? options.cacheDir : undefined,
-    assetsDir,
+    assetsDir: options.assetsDir,
     assetUrlTransform,
     internalLink,
     properties,
@@ -266,14 +250,14 @@ export async function main(opts: MainOptions) {
   console.log(`Saved meta data to ${metaFilePath}`);
 
   // download assets (images, videos, audio)
-  if (shouldDownloadAssets && assets.size > 0) {
+  if (options.downloadAssets && assets.size > 0) {
     console.log(`Found ${assets.size} assets to download`);
     await downloadAssets(assets, {
       dir: assetsDownloadDir,
       concurrency: options.concurrency,
-      optimize: optimizeAssets,
+      optimize: options.optimizeAssets,
       debug: options.debug,
-      overwrite: shouldDownloadAssets === "always",
+      overwrite: options.downloadAssets === "always",
     });
   }
 
@@ -312,14 +296,14 @@ export async function main(opts: MainOptions) {
       ext.push("html");
     }
 
-    if (shouldDownloadAssets && content.assets && content.assets.size > 0) {
+    if (options.downloadAssets && content.assets && content.assets.size > 0) {
       console.log(`Downloading ${content.assets.size} assets for post ${post.id}...`);
       await downloadAssetsWithRetry(content.assets, post.id, client, {
         dir: assetsDownloadDir,
         concurrency: options.concurrency,
-        optimize: optimizeAssets,
+        optimize: options.optimizeAssets,
         debug: options.debug,
-        overwrite: shouldDownloadAssets === "always",
+        overwrite: options.downloadAssets === "always",
       });
     }
 
