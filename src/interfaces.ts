@@ -4,7 +4,7 @@ export type Client = {
   getDatabaseAndAllPosts(): Promise<{
     database: Database;
     posts: Post[];
-    images: Map<string, string>;
+    assets: Map<string, string>;
   }>;
   getPostContent(postId: string): Promise<PostContent>;
   loadCache(): Promise<void>;
@@ -42,7 +42,7 @@ export type Post = {
 export type PostContent = {
   markdown: string;
   html: string;
-  images?: Map<string, string>;
+  assets?: Map<string, string>;
 };
 
 export type Tag = {

@@ -17,14 +17,14 @@ Options:
   --db <id>                            Notion database ID
   --page <id>                          Notion page ID when generating only specific page (optional)
   --output <path>                      output directory (default: "dist")
-  --image-dir <path>                   image directory in output dir (default: "images")
+  --assets-dir <path>                  assets directory in output dir for images, videos, audio (default: "assets")
   --cache-dir <path>                   cache directory (default: "cache")
   --format                             md,html, md, or html (default: md,html)
   --frontmatter                        add frontmatter to generated files (default: false)
   --cache                              enable cache (default: true)
-  --download-images                    download images. If "always" is specified, overwrites existing images. (default: true)
-  --optimize-images                    convert images to WebP (default: true)
-  --image-base-url <url>               base URL for images (e.g. https://cdn.example.com/images/)
+  --download-assets                    download assets (images, videos, audio). If "always" is specified, overwrites existing assets. (default: true)
+  --optimize-assets                    optimize assets (convert images to WebP) (default: true)
+  --asset-base-url <url>               base URL for assets (e.g. https://cdn.example.com/assets/)
   --internal-link-template <template>  internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})
   --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
   --properties <mapping>               Notion property name mappings in key=value format (e.g. title=Title,slug=Slug)
@@ -59,7 +59,7 @@ const customClient = new Client({
   auth: "NOTION_API_KEY",
   databaseId: "DATABASE_ID",
   cacheDir: "cache",
-  imageUrlTransform: (filename) => `https://cdn.myblog.com/images/${filename}`,
+  assetUrlTransform: (filename) => `https://cdn.myblog.com/assets/${filename}`,
   internalLink: (post) => `https://myblog.com/posts/${post.slug || post.id}`,
 });
 
@@ -73,7 +73,7 @@ const db = await client.getDatabase();
 const posts = await client.getAllPosts();
 
 for (const post of posts) {
-  // get post content (also images will be downloaded)
+  // get post content (images, videos, audio will be collected)
   // Pass all posts for internal link resolution
   const content = await client.getPostContent(post.id, posts);
 
@@ -81,10 +81,10 @@ for (const post of posts) {
 
   // content.html is html
 
-  // download images to dist/images
-  await downloadImages(content.images);
-  // or
-  // await downloadImagesWithRetry(content.images, post.id, client)
+  // download assets (images, videos, audio) to dist/assets
+  await downloadAssets(content.assets);
+  // or with retry on 403 errors
+  // await downloadAssetsWithRetry(content.assets, post.id, client)
 }
 ```
 
@@ -98,8 +98,8 @@ type Options = {
   auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
   cacheDir?: string;
-  /** Relative path to image directory, used for image URLs in markdown. Defaults to "images". */
-  imageDir?: string;
+  /** Relative path to assets directory, used for asset URLs (images, videos, audio) in markdown. Defaults to "assets". */
+  assetsDir?: string;
   /** Render markdown to HTML. Defaults to true. */
   renderHtml?: boolean;
   /** If true, debug messages will be logged to console. Defaults to false. */
@@ -129,8 +129,8 @@ type Options = {
   };
   /** Additional property names to include in meta.json and post objects */
   additionalProperties?: string[];
-  /** Transform function for image URLs. Takes filename and returns the desired URL. */
-  imageUrlTransform?: (filename: string) => string;
+  /** Transform function for asset URLs (images, videos, audio). Takes filename and returns the desired URL. */
+  assetUrlTransform?: (filename: string) => string;
   /** Transform function for internal page links. Defaults to post slug without extension. */
   internalLink?: (post: Post) => string;
   /** Custom additional Notion markdown transformers */
@@ -203,8 +203,8 @@ npx notiondown --auth API_KEY --db DATABASE_ID --filename-template "${year}/${mo
 # Custom internal link template for blog posts
 npx notiondown --auth API_KEY --db DATABASE_ID --internal-link-template "https://myblog.com/posts/${slug}"
 
-# Using image base URL for CDN
-npx notiondown --auth API_KEY --db DATABASE_ID --image-base-url "https://cdn.myblog.com/images/"
+# Using asset base URL for CDN
+npx notiondown --auth API_KEY --db DATABASE_ID --asset-base-url "https://cdn.myblog.com/assets/"
 ```
 
 ### Library Examples

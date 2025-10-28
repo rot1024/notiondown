@@ -6,17 +6,17 @@ import sharp from "sharp";
 import { type Client } from "./interfaces";
 
 /**
- * Downloads images from a map of image URLs to local paths.
+ * Downloads assets (images, videos, audio) from a map of URLs to local paths.
  */
-export async function downloadImages(
-  images: Map<string, string> | null | undefined,
+export async function downloadAssets(
+  assets: Map<string, string> | null | undefined,
   {
     dir = "dist/images",
     concurrency = 3,
     optimize = true,
     overwrite = false,
     debug = false,
-    onDownloaded: onSave = (_imageUrl, localDest, buffer, _optimized) => {
+    onDownloaded: onSave = (_assetUrl, localDest, buffer, _optimized) => {
       return fs.promises.writeFile(localDest, buffer);
     }
   }: {
@@ -25,19 +25,19 @@ export async function downloadImages(
     optimize?: boolean;
     overwrite?: boolean;
     debug?: boolean;
-    onDownloaded?: (imageUrl: string, localDest: string, buffer: Buffer<ArrayBufferLike>, optimized: boolean) => Promise<void>;
+    onDownloaded?: (assetUrl: string, localDest: string, buffer: Buffer<ArrayBufferLike>, optimized: boolean) => Promise<void>;
   } = {}
 ): Promise<void> {
-  if (!images || images.size === 0) return;
+  if (!assets || assets.size === 0) return;
 
   await fs.promises.mkdir(dir, { recursive: true });
 
   const { errors } = await PromisePool.withConcurrency(concurrency)
-    .for(images)
-    .process(async ([imageUrl, localUrl]) => {
-      if (!imageUrl || !localUrl) {
+    .for(assets)
+    .process(async ([assetUrl, localUrl]) => {
+      if (!assetUrl || !localUrl) {
         if (debug) {
-          console.warn(`notiondown: image: skipping invalid image URL: ${imageUrl} -> ${localUrl}`);
+          console.warn(`notiondown: asset: skipping invalid asset URL: ${assetUrl} -> ${localUrl}`);
         }
         return;
       }
@@ -45,7 +45,7 @@ export async function downloadImages(
       const localName = basename(localUrl);
       if (!localName) {
         if (debug) {
-          console.warn(`notiondown: image: skipping invalid local URL: ${localUrl}`);
+          console.warn(`notiondown: asset: skipping invalid local URL: ${localUrl}`);
         }
         return;
       }
@@ -54,19 +54,19 @@ export async function downloadImages(
 
       if (!overwrite && await fs.promises.stat(localDest).catch(() => null)) {
         if (debug) {
-          console.log(`notiondown: image: download skipped: ${imageUrl} -> ${localDest}`);
+          console.log(`notiondown: asset: download skipped: ${assetUrl} -> ${localDest}`);
         }
         return;
       }
 
       if (debug) {
-        console.log(`notiondown: image: download: ${imageUrl} -> ${localDest}`);
+        console.log(`notiondown: asset: download: ${assetUrl} -> ${localDest}`);
       }
 
-      const res = await fetch(imageUrl);
+      const res = await fetch(assetUrl);
       if (res.status !== 200) {
         throw new Error(
-          `Failed to download ${imageUrl} due to statu code ${res.status}`,
+          `Failed to download ${assetUrl} due to status code ${res.status}`,
         );
       }
 
@@ -78,41 +78,44 @@ export async function downloadImages(
         const optimzied = await sharp(body).rotate().webp().toBuffer();
         if (debug) {
           console.log(
-            "notiondown: image: optimized",
+            "notiondown: asset: optimized",
             localDest,
             `${body.byteLength} bytes -> ${optimzied.length} bytes`,
             `(${Math.floor((optimzied.length / body.byteLength) * 100)}%)`,
           );
         }
-        await onSave(imageUrl, localDest, optimzied, true);
+        await onSave(assetUrl, localDest, optimzied, true);
       } else {
         const buf = Buffer.from(body);
-        await onSave(imageUrl, localDest, buf, false);
+        await onSave(assetUrl, localDest, buf, false);
       }
     });
 
   if (errors.length > 0) {
     throw new Error(
-      `Failed to download images: ${errors.map((e) => e.message).join(", ")}`,
+      `Failed to download assets: ${errors.map((e) => e.message).join(", ")}`,
     );
   }
 }
 
+// Backward compatibility alias
+export const downloadImages = downloadAssets;
+
 /**
- * Downloads images with retry logic for 403 errors.
+ * Downloads assets with retry logic for 403 errors.
  * If a 403 error occurs, it purges the cache for the specific post,
- * refetches the post content, and retries the image download with fresh URLs.
+ * refetches the post content, and retries the asset download with fresh URLs.
  */
-export async function downloadImagesWithRetry(
-  images: Map<string, string> | null | undefined,
+export async function downloadAssetsWithRetry(
+  assets: Map<string, string> | null | undefined,
   postId: string,
   client: Client,
   options: {
-    downloadImages?: typeof downloadImages;
-  } & Parameters<typeof downloadImages>[1]
+    downloadAssets?: typeof downloadAssets;
+  } & Parameters<typeof downloadAssets>[1]
 ): Promise<void> {
   try {
-    await (options.downloadImages ?? downloadImages)(images, options);
+    await (options.downloadAssets ?? downloadAssets)(assets, options);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -127,17 +130,17 @@ export async function downloadImagesWithRetry(
       console.log(`Refetching fresh content for post ${postId}...`);
       const freshContent = await client.getPostContent(postId);
 
-      if (freshContent.images && freshContent.images.size > 0) {
-        console.log(`Retrying image download with fresh URLs...`);
+      if (freshContent.assets && freshContent.assets.size > 0) {
+        console.log(`Retrying asset download with fresh URLs...`);
         try {
-          await (options.downloadImages ?? downloadImages)(freshContent.images, options);
-          console.log(`Successfully downloaded images after cache refresh.`);
+          await (options.downloadAssets ?? downloadAssets)(freshContent.assets, options);
+          console.log(`Successfully downloaded assets after cache refresh.`);
         } catch (retryError) {
-          console.error(`Failed to download images even after cache refresh:`, retryError);
+          console.error(`Failed to download assets even after cache refresh:`, retryError);
           throw retryError;
         }
       } else {
-        console.log(`No images found in fresh content.`);
+        console.log(`No assets found in fresh content.`);
       }
     } else {
       // Re-throw non-403 errors
@@ -145,3 +148,6 @@ export async function downloadImagesWithRetry(
     }
   }
 }
+
+// Backward compatibility alias
+export const downloadImagesWithRetry = downloadAssetsWithRetry;

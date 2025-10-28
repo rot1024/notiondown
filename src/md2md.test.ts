@@ -18,8 +18,8 @@ describe("toggle block transformation", () => {
     const result = transform({
       blocks,
       posts: [],
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
     });
 
     expect(result).toHaveLength(1);
@@ -54,8 +54,8 @@ describe("toggle block transformation", () => {
     const result = transform({
       blocks,
       posts: [],
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
     });
 
     expect(result).toHaveLength(1);
@@ -76,8 +76,8 @@ describe("toggle block transformation", () => {
     const result = transform({
       blocks,
       posts: [],
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
     });
 
     expect(result).toHaveLength(1);
@@ -117,8 +117,8 @@ describe("toggle block transformation", () => {
     const result = transform({
       blocks,
       posts: [],
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
     });
 
     expect(result).toHaveLength(1);
@@ -174,8 +174,8 @@ describe("internal link transformation", () => {
     const result = transform({
       blocks,
       posts: mockPosts,
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
     });
 
     expect(result).toHaveLength(1);
@@ -197,8 +197,8 @@ describe("internal link transformation", () => {
     const result = transform({
       blocks,
       posts: mockPosts,
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
       internalLink,
     });
 
@@ -219,8 +219,8 @@ describe("internal link transformation", () => {
     const result = transform({
       blocks,
       posts: mockPosts,
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
     });
 
     expect(result).toHaveLength(1);
@@ -255,8 +255,8 @@ describe("internal link transformation", () => {
     const result = transform({
       blocks,
       posts: mockPosts,
-      images: new Map(),
-      imageDir: "images",
+      assets: new Map(),
+      assetsDir: "assets",
       internalLink,
     });
 

@@ -25,9 +25,13 @@ export type Options = {
   auth?: string;
   /** Cache directory for storing cached data. It should be set until the custom client is provided. */
   cacheDir?: string;
-  /** Relative path to image directory, used for image URLs in markdown. Defaults to "images". */
+  /** Relative path to assets directory, used for asset URLs (images, videos, audio) in markdown. Defaults to "assets". */
+  assetsDir?: string;
+  /** @deprecated Use assetsDir instead. Relative path to image directory. */
   imageDir?: string;
-  /** Transform function for image URLs. Takes filename and returns the desired URL. */
+  /** Transform function for asset URLs (images, videos, audio). Takes filename and returns the desired URL. */
+  assetUrlTransform?: (filename: string) => string;
+  /** @deprecated Use assetUrlTransform instead. Transform function for image URLs. */
   imageUrlTransform?: (filename: string) => string;
   /** Render markdown to HTML. Defaults to true. */
   renderHtml?: boolean;
@@ -57,8 +61,8 @@ export class Client implements ClientType {
   n2m: NotionToMarkdown;
   databaseId: string;
   cacheDir?: string;
-  imageDir: string;
-  imageUrlTransform?: (filename: string) => string;
+  assetsDir: string;
+  assetUrlTransform?: (filename: string) => string;
   renderHtml?: boolean;
   debug = false;
   properties: Required<PropertyNames>;
@@ -100,8 +104,10 @@ export class Client implements ClientType {
     this.databaseId = options.databaseId;
     this.debug = options.debug || false;
     this.cacheDir = options.cacheDir;
-    this.imageDir = options.imageDir ?? "images";
-    this.imageUrlTransform = options.imageUrlTransform;
+    // Handle backward compatibility for imageDir -> assetsDir
+    this.assetsDir = options.assetsDir || options.imageDir || "assets";
+    // Handle backward compatibility for imageUrlTransform -> assetUrlTransform
+    this.assetUrlTransform = options.assetUrlTransform || options.imageUrlTransform;
     this.renderHtml = options.renderHtml ?? true;
     this.properties = { ...DEFAULT_PROPERTY_NAMES, ...options.properties };
     this.additionalProperties = options.additionalProperties || [];
@@ -139,36 +145,36 @@ export class Client implements ClientType {
   async getDatabaseAndAllPosts(): Promise<{
     database: Database;
     posts: Post[];
-    images: Map<string, string>;
+    assets: Map<string, string>;
   }> {
     const [database, posts] = await Promise.all([
       this.getDatabase(),
       this.getAllPosts(),
     ]);
 
-    const images = new Map<string, string>();
+    const assets = new Map<string, string>();
     if (database.images) {
       for (const [url, assetUrl] of Object.entries(database.images)) {
-        images.set(url, assetUrl);
+        assets.set(url, assetUrl);
       }
     }
 
     for (const post of posts) {
       if (post.images) {
         for (const [url, assetUrl] of Object.entries(post.images)) {
-          images.set(url, assetUrl);
+          assets.set(url, assetUrl);
         }
       }
     }
 
-    return { database, posts, images };
+    return { database, posts, assets };
   }
 
   async getDatabase(): Promise<Database> {
     const res = await this.client.databases.retrieve({
       database_id: this.databaseId,
     });
-    return buildDatabase(res, this.imageDir);
+    return buildDatabase(res, this.assetsDir);
   }
 
   async getAllPosts(): Promise<Post[]> {
@@ -198,7 +204,7 @@ export class Client implements ClientType {
 
     const posts = results
       .filter(p => isValidPage(p, this.properties, this.debug))
-      .map(p =>  buildPost(p, this.imageDir, this.properties, this.additionalProperties));
+      .map(p =>  buildPost(p, this.assetsDir, this.properties, this.additionalProperties));
 
 
     if (this.debug) {
@@ -211,7 +217,7 @@ export class Client implements ClientType {
     try {
       const page = await this.client.pages.retrieve({ page_id: pageId });
       if (isValidPage(page, this.properties, this.debug)) {
-        return buildPost(page, this.imageDir, this.properties, this.additionalProperties);
+        return buildPost(page, this.assetsDir, this.properties, this.additionalProperties);
       }
       return null;
     } catch (error) {
@@ -225,13 +231,13 @@ export class Client implements ClientType {
   async getPostContent(postId: string, posts?: Post[]): Promise<PostContent> {
     const mdblocks = await this.n2m.pageToMarkdown(postId);
 
-    const images = new Map<string, string>();
+    const assets = new Map<string, string>();
     const transformed = transform({
       blocks: mdblocks,
       posts,
-      images,
-      imageDir: this.imageDir,
-      imageUrlTransform: this.imageUrlTransform,
+      assets,
+      assetsDir: this.assetsDir,
+      assetUrlTransform: this.assetUrlTransform,
       internalLink: this.internalLink,
       transformers: this.mdTransformers,
     });
@@ -242,7 +248,7 @@ export class Client implements ClientType {
     return {
       markdown,
       html,
-      images,
+      assets,
     };
   }
 }

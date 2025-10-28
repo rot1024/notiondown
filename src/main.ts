@@ -1,6 +1,6 @@
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
-import { Client, downloadImages, downloadImagesWithRetry } from "./index.ts";
+import { Client, downloadAssets, downloadAssetsWithRetry } from "./index.ts";
 import type { Post, DatabaseFilterOptions } from "./interfaces.ts";
 
 export type MainOptions = {
@@ -8,14 +8,18 @@ export type MainOptions = {
   db: string;
   page?: string;
   output?: string;
-  imageDir?: string;
+  assetsDir?: string;
+  imageDir?: string; // deprecated, use assetsDir
   cacheDir?: string;
   format?: string;
   frontmatter?: boolean;
   cache?: boolean;
-  downloadImages?: boolean | "always";
-  optimizeImages?: boolean;
-  imageBaseUrl?: string;
+  downloadAssets?: boolean | "always";
+  downloadImages?: boolean | "always"; // deprecated, use downloadAssets
+  optimizeAssets?: boolean;
+  optimizeImages?: boolean; // deprecated, use optimizeAssets
+  assetBaseUrl?: string;
+  imageBaseUrl?: string; // deprecated, use assetBaseUrl
   internalLinkTemplate?: string;
   filenameTemplate?: string;
   properties?: string;
@@ -37,20 +41,27 @@ type MetaPost = Post & {
 
 const DEFAULT_OPTIONS = {
   output: "dist",
-  imageDir: "images",
+  assetsDir: "assets",
   cacheDir: "cache",
   format: "md,html",
   frontmatter: false,
   cache: true,
-  downloadImages: true,
-  optimizeImages: true,
+  downloadAssets: true,
+  optimizeAssets: true,
   debug: false,
   filenameTemplate: "${slug}${_lang}.${ext}",
-} satisfies Omit<MainOptions, "db" | "auth">;
+} satisfies Omit<MainOptions, "db" | "auth" | "imageDir" | "downloadImages" | "optimizeImages" | "imageBaseUrl">;
 
 export async function main(opts: MainOptions) {
   const options = { ...DEFAULT_OPTIONS, ...opts };
-  const imageDownloadDir = join(options.output, options.imageDir);
+
+  // Handle backward compatibility for deprecated options
+  const assetsDir = options.assetsDir || options.imageDir || DEFAULT_OPTIONS.assetsDir;
+  const shouldDownloadAssets = options.downloadAssets ?? options.downloadImages ?? DEFAULT_OPTIONS.downloadAssets;
+  const optimizeAssets = options.optimizeAssets ?? options.optimizeImages ?? DEFAULT_OPTIONS.optimizeAssets;
+  const assetBaseUrl = options.assetBaseUrl || options.imageBaseUrl;
+
+  const assetsDownloadDir = join(options.output, assetsDir);
   const format = options.format.split(",").map((f) => f.trim());
 
   // Parse property mappings
@@ -118,13 +129,13 @@ export async function main(opts: MainOptions) {
     };
   }
 
-  // Create image URL transform function if base URL is provided
-  let imageUrlTransform: ((filename: string) => string) | undefined;
-  if (options.imageBaseUrl) {
-    const baseUrl = options.imageBaseUrl.endsWith('/')
-      ? options.imageBaseUrl
-      : options.imageBaseUrl + '/';
-    imageUrlTransform = (filename: string) => baseUrl + filename;
+  // Create asset URL transform function if base URL is provided
+  let assetUrlTransform: ((filename: string) => string) | undefined;
+  if (assetBaseUrl) {
+    const baseUrl = assetBaseUrl.endsWith('/')
+      ? assetBaseUrl
+      : assetBaseUrl + '/';
+    assetUrlTransform = (filename: string) => baseUrl + filename;
   }
 
   // Helper function to format date parts
@@ -175,8 +186,8 @@ export async function main(opts: MainOptions) {
     databaseId: options.db,
     auth: options.auth,
     cacheDir: options.cache ? options.cacheDir : undefined,
-    imageDir: options.imageDir,
-    imageUrlTransform,
+    assetsDir,
+    assetUrlTransform,
     internalLink,
     properties,
     additionalProperties,
@@ -189,7 +200,7 @@ export async function main(opts: MainOptions) {
 
   let posts;
   let database;
-  let images = new Map<string, string>();
+  let assets = new Map<string, string>();
 
   if (options.page) {
     // Generate only specific page
@@ -202,15 +213,15 @@ export async function main(opts: MainOptions) {
     posts = [post];
     database = await client.getDatabase();
 
-    // Collect images from database and the specific post
+    // Collect assets from database and the specific post
     if (database.images) {
       for (const [url, assetUrl] of Object.entries(database.images)) {
-        images.set(url, assetUrl);
+        assets.set(url, assetUrl);
       }
     }
     if (post.images) {
       for (const [url, assetUrl] of Object.entries(post.images)) {
-        images.set(url, assetUrl);
+        assets.set(url, assetUrl);
       }
     }
 
@@ -221,7 +232,7 @@ export async function main(opts: MainOptions) {
     const result = await client.getDatabaseAndAllPosts();
     database = result.database;
     posts = result.posts;
-    images = result.images;
+    assets = result.assets;
     console.log(`Found ${posts.length} posts`);
   }
 
@@ -248,15 +259,15 @@ export async function main(opts: MainOptions) {
   writeFileSync(metaFilePath, JSON.stringify(meta, null, 2), "utf-8");
   console.log(`Saved meta data to ${metaFilePath}`);
 
-  // download images
-  if (options.downloadImages && images.size > 0) {
-    console.log(`Found ${images.size} images to download`);
-    await downloadImages(images, {
-      dir: imageDownloadDir,
+  // download assets (images, videos, audio)
+  if (shouldDownloadAssets && assets.size > 0) {
+    console.log(`Found ${assets.size} assets to download`);
+    await downloadAssets(assets, {
+      dir: assetsDownloadDir,
       concurrency: options.concurrency,
-      optimize: options.optimizeImages,
+      optimize: optimizeAssets,
       debug: options.debug,
-      overwrite: options.downloadImages === "always",
+      overwrite: shouldDownloadAssets === "always",
     });
   }
 
@@ -295,14 +306,14 @@ export async function main(opts: MainOptions) {
       ext.push("html");
     }
 
-    if (options.downloadImages && content.images && content.images.size > 0) {
-      console.log(`Downloading ${content.images.size} images for post ${post.id}...`);
-      await downloadImagesWithRetry(content.images, post.id, client, {
-        dir: imageDownloadDir,
+    if (shouldDownloadAssets && content.assets && content.assets.size > 0) {
+      console.log(`Downloading ${content.assets.size} assets for post ${post.id}...`);
+      await downloadAssetsWithRetry(content.assets, post.id, client, {
+        dir: assetsDownloadDir,
         concurrency: options.concurrency,
-        optimize: options.optimizeImages,
+        optimize: optimizeAssets,
         debug: options.debug,
-        overwrite: options.downloadImages === "always",
+        overwrite: shouldDownloadAssets === "always",
       });
     }
 
