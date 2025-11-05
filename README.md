@@ -12,6 +12,16 @@ A CLI tool and Node.js library to convert Notion pages to markdown and HTML with
 
 💡 Are you looking for an Astro theme for Notion? -> [astrotion](https://github.com/rot1024/astrotion)
 
+### Mermaid Diagrams
+
+notiondown does not include server-side rendering for Mermaid diagrams to avoid heavy dependencies (like Playwright). If you want to render Mermaid diagrams, please use a client-side solution in your frontend:
+
+- [mermaid.js](https://mermaid.js.org/) - Official Mermaid library for browser rendering
+- [@mermaid-js/mermaid-cli](https://github.com/mermaid-js/mermaid-cli) - CLI tool for pre-rendering diagrams
+- Framework integrations: [React](https://github.com/mermaid-js/mermaid-react), [Vue](https://github.com/mermaid-js/mermaid-vue), [Svelte](https://github.com/mermaid-js/mermaid-svelte)
+
+The generated HTML will contain code blocks with the `language-mermaid` class, which can be detected and rendered by these client-side libraries.
+
 ### Video Optimization (Optional)
 
 To use video optimization (`--optimize-videos`), you need to install ffmpeg separately:

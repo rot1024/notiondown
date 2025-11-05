@@ -55,7 +55,6 @@
     "notion-to-md": "^3.1.9",
     "rehype-external-links": "^3.0.0",
     "rehype-katex": "^7.0.1",
-    "rehype-mermaid": "^3.0.0",
     "rehype-raw": "^7.0.0",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
