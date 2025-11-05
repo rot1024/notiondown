@@ -7,7 +7,7 @@ import isUrl from "is-url";
 import type { Root as MdRoot, Paragraph, PhrasingContent, Node } from "mdast";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeKatex from "rehype-katex";
-// import rehypeMermaid from "rehype-mermaid";
+import rehypeMermaid from "rehype-mermaid";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
@@ -58,8 +58,8 @@ export class Md2Html {
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw)
       .use(rehypeKatex)
-      // .use(rehypeMermaid, { strategy: "pre-mermaid" })
-      .use(() => this.rehypeShiki(theme)) // use shiki instead of prism
+      .use(rehypeMermaid, { strategy: "pre-mermaid" })
+      .use(() => this.rehypeShiki(theme))
       .use(rehypeFigure)
       .use(autoLinkForFigcaption)
       .use(rehypeExternalLinks, {
