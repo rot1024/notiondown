@@ -37,6 +37,9 @@ export type Post = {
   featuredImage?: string;
   images?: Record<string, string>;
   additionalProperties?: Record<string, any>;
+  parentId?: string | null;
+  pathSegments?: string[];
+  childIds?: string[];
 };
 
 export type PostContent = {

@@ -1,7 +1,9 @@
 import { writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { Client, downloadAssets, downloadAssetsWithRetry } from "./index.ts";
 import type { Post, DatabaseFilterOptions } from "./interfaces.ts";
+import type { HierarchyTree, HierarchyMode } from "./hierarchy.ts";
+import { getHierarchyDir, getEffectiveSlug, computeRelativePath } from "./hierarchy.ts";
 
 export type MainOptions = {
   auth: string;
@@ -31,10 +33,13 @@ export type MainOptions = {
   tags?: string;
   tagsAll?: string;
   excludeTags?: string;
+  hierarchyMode?: string;
+  hierarchyRelation?: string;
 };
 
 type MetaPost = Post & {
   fileName: Record<string, string>;
+  path?: string;
 }
 
 const DEFAULT_OPTIONS = {
@@ -163,7 +168,9 @@ export async function main(opts: MainOptions) {
   };
 
   // Create internal link transform function if template is provided
-  let internalLink: ((post: Post) => string) | undefined;
+  // tree is assigned later, but the closure captures the variable reference
+  let tree: HierarchyTree | null = null;
+  let internalLink: ((post: Post, fromPost?: Post) => string) | undefined;
   if (options.internalLinkTemplate) {
     internalLink = (post: Post) => {
       const { date, year, month, day } = formatDateParts(post.date);
@@ -178,12 +185,38 @@ export async function main(opts: MainOptions) {
     };
   }
 
+  // Parse hierarchy options
+  let hierarchyMode: HierarchyMode | undefined;
+  if (options.hierarchyMode) {
+    if (!["relation", "subpage", "both"].includes(options.hierarchyMode)) {
+      throw new Error(`Invalid hierarchy mode: ${options.hierarchyMode}. Must be "relation", "subpage", or "both".`);
+    }
+    hierarchyMode = options.hierarchyMode as HierarchyMode;
+    if ((hierarchyMode === "relation" || hierarchyMode === "both") && !options.hierarchyRelation) {
+      throw new Error(`--hierarchy-relation is required when using hierarchy mode "${hierarchyMode}".`);
+    }
+    // Auto-add ${dir} to filename template if hierarchy is enabled and template doesn't include it
+    if (!options.filenameTemplate.includes("${dir}")) {
+      options.filenameTemplate = "${dir}" + options.filenameTemplate;
+    }
+    // Set default internal link function for hierarchy mode if no template is provided
+    if (!internalLink) {
+      internalLink = (targetPost: Post, fromPost?: Post) => {
+        if (!tree) return targetPost.slug || targetPost.id;
+        return computeRelativePath(fromPost, targetPost, tree);
+      };
+    }
+  }
+
   // Function to generate filename from template
-  const generateFilename = (post: Post, ext: string): string => {
+  const generateFilename = (post: Post, ext: string, tree?: HierarchyTree | null): string => {
     const { date, year, month, day } = formatDateParts(post.date);
+    const dir = tree ? getHierarchyDir(post.id, tree) : "";
+    const slug = tree ? getEffectiveSlug(post.id, tree) : (post.slug || post.id);
     return options.filenameTemplate
+      .replace(/\$\{dir\}/g, dir)
       .replace(/\$\{id\}/g, post.id)
-      .replace(/\$\{slug\}/g, post.slug || post.id)
+      .replace(/\$\{slug\}/g, slug || post.id)
       .replace(/\$\{ext\}/g, ext)
       .replace(/\$\{date\}/g, date)
       .replace(/\$\{year\}/g, year)
@@ -205,6 +238,10 @@ export async function main(opts: MainOptions) {
     md2html: options.shikiTheme ? { shikiTheme: options.shikiTheme as any } : undefined,
     debug: options.debug,
     filter,
+    hierarchy: hierarchyMode ? {
+      mode: hierarchyMode,
+      relationProperty: options.hierarchyRelation,
+    } : undefined,
   });
 
   console.log("Loading cache...");
@@ -238,6 +275,15 @@ export async function main(opts: MainOptions) {
     }
 
     console.log(`Found page: ${post.title}`);
+  } else if (hierarchyMode) {
+    // Generate all posts with hierarchy
+    console.log("Fetching database and posts with hierarchy...");
+    const result = await client.getPostTree();
+    database = result.database;
+    posts = result.posts;
+    assets = result.assets;
+    tree = result.tree;
+    console.log(`Found ${posts.length} posts (hierarchy mode: ${hierarchyMode})`);
   } else {
     // Generate all posts
     console.log("Fetching database and posts...");
@@ -258,11 +304,16 @@ export async function main(opts: MainOptions) {
     const fileName: Record<string, string> = {};
     const formatList = options.format.split(",").map((f) => f.trim());
     for (const ext of formatList) {
-      fileName[ext] = generateFilename(post, ext);
+      fileName[ext] = generateFilename(post, ext, tree);
     }
 
     const postData: MetaPost = { ...post, fileName };
     delete postData.images;
+
+    // Add hierarchy path when hierarchy is enabled
+    if (tree) {
+      postData.path = post.pathSegments?.join("/") || post.slug;
+    }
 
     return postData;
   });
@@ -292,7 +343,7 @@ export async function main(opts: MainOptions) {
     const ext = [];
 
     if (format.includes("md") && content.markdown) {
-      const filenameMd = generateFilename(post, "md");
+      const filenameMd = generateFilename(post, "md", tree);
       const filepathMd = join(options.output, filenameMd);
       let markdownContent = content.markdown;
 
@@ -301,12 +352,13 @@ export async function main(opts: MainOptions) {
         markdownContent = frontmatter + content.markdown;
       }
 
+      mkdirSync(dirname(filepathMd), { recursive: true });
       writeFileSync(filepathMd, markdownContent, "utf-8");
       ext.push("md");
     }
 
     if (format.includes("html") && content.html) {
-      const filenameHtml = generateFilename(post, "html");
+      const filenameHtml = generateFilename(post, "html", tree);
       const filepathHtml = join(options.output, filenameHtml);
       let htmlContent = content.html;
 
@@ -315,6 +367,7 @@ export async function main(opts: MainOptions) {
         htmlContent = htmlMetadata + content.html;
       }
 
+      mkdirSync(dirname(filepathHtml), { recursive: true });
       writeFileSync(filepathHtml, htmlContent, "utf-8");
       ext.push("html");
     }
@@ -332,7 +385,7 @@ export async function main(opts: MainOptions) {
     }
 
     if (ext.length > 0) {
-      const filenames = ext.map(e => generateFilename(post, e));
+      const filenames = ext.map(e => generateFilename(post, e, tree));
       console.log(`Saved: ${filenames.join(", ")}`);
     }
   }

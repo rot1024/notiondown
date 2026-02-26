@@ -16,6 +16,7 @@ export function transform({
   assetUrlTransform,
   imageUrlTransform, // deprecated, for backward compatibility
   internalLink,
+  fromPostId,
   transformers = [],
 }: {
   blocks: MdBlock[],
@@ -27,18 +28,22 @@ export function transform({
   assetUrlTransform?: (filename: string) => string,
   /** @deprecated Use assetUrlTransform instead */
   imageUrlTransform?: (filename: string) => string,
-  internalLink?: (post: Post) => string,
+  internalLink?: (post: Post, fromPost?: Post) => string,
+  fromPostId?: string,
   transformers?: MdTransformer[],
 }): MdBlock[] {
   // Handle backward compatibility
   const dir = assetsDir || imageDir;
   const urlTransform = assetUrlTransform || imageUrlTransform;
+  const fromPost = fromPostId ? posts?.find((p) => p.id === fromPostId) : undefined;
 
   const processedBlocks = transformMdBlocks(
     blocks,
     (block) => transformMdAssetBlock(block, assets, dir, urlTransform),
-    (block) => transformMdLinkBlock(block, posts, internalLink),
+    (block) => transformMdLinkBlock(block, posts, internalLink, fromPost),
     (block) => transformToggleBlock(block),
+    (block) => normalizeSmartQuotes(block),
+    (block) => escapeDollarInCurrency(block),
     ...transformers,
   );
 
@@ -175,7 +180,8 @@ function transformAudioBlock(
 function transformMdLinkBlock(
   block: MdBlock,
   posts?: Post[],
-  internalLink?: (slug: Post) => string
+  internalLink?: (post: Post, fromPost?: Post) => string,
+  fromPost?: Post,
 ): MdBlock {
   if (block.type !== "link_to_page") return block;
 
@@ -184,7 +190,7 @@ function transformMdLinkBlock(
   if (pageId) {
     const post = posts?.find((post) => post.id === pageId);
     if (post) {
-      const linkTarget = internalLink ? internalLink(post) : post.slug || post.id;
+      const linkTarget = internalLink ? internalLink(post, fromPost) : post.slug || post.id;
       block.parent = block.parent.replace(pageId, linkTarget);
     }
   }
@@ -229,4 +235,85 @@ function processToggleCloseTags(blocks: MdBlock[]): MdBlock[] {
   }
 
   return result;
+}
+
+// Normalizes smart quotes to regular quotes to prevent KaTeX warnings
+function normalizeSmartQuotes(block: MdBlock): MdBlock {
+  // Skip code blocks
+  if (block.type === "code") {
+    return block;
+  }
+
+  let text = block.parent;
+
+  // Replace smart quotes with regular quotes
+  text = text.replace(/[""]/g, '"'); // Left and right double quotes → regular double quote
+  text = text.replace(/['']/g, "'"); // Left and right single quotes → regular single quote
+
+  block.parent = text;
+  return block;
+}
+
+// Escapes dollar signs in currency notations to prevent them from being interpreted as math delimiters
+function escapeDollarInCurrency(block: MdBlock): MdBlock {
+  // Skip code blocks and equation blocks
+  if (block.type === "code" || block.type === "equation") {
+    return block;
+  }
+
+  let text = block.parent;
+
+  // Replace currency dollar signs with escaped version
+  // Pattern matches: $followed by a digit, but not when already part of a math expression ($...$)
+  // We need to be careful not to break inline math like $x$ or $O(n)$
+
+  // Strategy: Find all $ signs and determine if they're part of a valid math expression or currency
+  const dollars: { index: number; isMath: boolean }[] = [];
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '$') {
+      dollars.push({ index: i, isMath: false });
+    }
+  }
+
+  // Mark pairs of $ as math delimiters
+  for (let i = 0; i < dollars.length - 1; i += 2) {
+    const start = dollars[i].index;
+    const end = dollars[i + 1].index;
+
+    // Check if this looks like a math expression
+    // Math expressions typically have: $letter or $\ or ${ after opening $
+    const afterStart = text[start + 1];
+    const beforeEnd = text[end - 1];
+
+    // If starts with digit and contains /, it's likely currency
+    if (afterStart && /\d/.test(afterStart)) {
+      const segment = text.substring(start, end + 1);
+      if (segment.includes('/') || /^\$\d+(\.\d+)?\$/.test(segment)) {
+        // This looks like currency in both positions, don't mark as math
+        continue;
+      }
+    }
+
+    // Otherwise, mark as math
+    dollars[i].isMath = true;
+    dollars[i + 1].isMath = true;
+  }
+
+  // Now escape the $ signs that are not math delimiters
+  // Build the result string from right to left to preserve indices
+  for (let i = dollars.length - 1; i >= 0; i--) {
+    const { index, isMath } = dollars[i];
+
+    if (!isMath) {
+      // Check if followed by a digit (currency pattern)
+      const nextChar = text[index + 1];
+      if (nextChar && /\d/.test(nextChar)) {
+        text = text.substring(0, index) + '\\$' + text.substring(index + 1);
+      }
+    }
+  }
+
+  block.parent = text;
+  return block;
 }

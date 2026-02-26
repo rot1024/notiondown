@@ -56,7 +56,9 @@ export class Md2Html {
       })
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw)
-      .use(rehypeKatex)
+      .use(rehypeKatex, {
+        strict: false, // Allow Unicode text in math mode (common in Notion content with Japanese)
+      })
       .use(() => this.rehypeShiki(theme))
       .use(rehypeFigure)
       .use(autoLinkForFigcaption)

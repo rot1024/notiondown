@@ -36,7 +36,10 @@ program
   .option("--date-on <date>", "filter posts on specified date")
   .option("--tags <tags>", "filter posts with specified tags (comma-separated, OR condition)")
   .option("--tags-all <tags>", "filter posts with all specified tags (comma-separated, AND condition)")
-  .option("--exclude-tags <tags>", "exclude posts with specified tags (comma-separated)");
+  .option("--exclude-tags <tags>", "exclude posts with specified tags (comma-separated)")
+  // Hierarchy options
+  .option("--hierarchy-mode <mode>", "hierarchy mode: relation, subpage, or both")
+  .option("--hierarchy-relation <property>", "relation property name for hierarchy (required for relation/both mode)");
 
 
 program.parse();

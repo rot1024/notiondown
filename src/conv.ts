@@ -31,9 +31,11 @@ export type PropertyNames = {
   updatedAt?: string;
   /** Lang property (select, default: Lang) */
   lang?: string;
+  /** Parent property (relation, for hierarchy mode). No default — only used when explicitly set. */
+  parent?: string;
 };
 
-export const DEFAULT_PROPERTY_NAMES: Required<PropertyNames> = {
+export const DEFAULT_PROPERTY_NAMES: Required<Omit<PropertyNames, 'parent'>> = {
   slug: "Slug",
   date: "Date",
   published: "Published",
@@ -57,6 +59,7 @@ const propertyTypes: Record<keyof PropertyNames, string> = {
   createdAt: "created_time",
   updatedAt: "last_edited_time",
   lang: "select",
+  parent: "relation",
 }
 
 export function buildDatabase(res: GetDataSourceResponse, dir?: string): Database {
@@ -89,7 +92,7 @@ export function isValidPage(
   propertyNames?: Partial<PropertyNames>,
   debug = false,
 ): p is PageObjectResponse {
-  const names: Required<PropertyNames> = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
+  const names = { ...DEFAULT_PROPERTY_NAMES, ...propertyNames };
   const properties = "properties" in p ? p.properties : null;
   if (!properties) return false;
 
@@ -188,6 +191,17 @@ export function buildPost(
     }
   }
 
+  // Extract parent ID from relation property if configured
+  let parentId: string | null | undefined = undefined;
+  if (propertyNames?.parent) {
+    const parentProp = properties[propertyNames.parent];
+    if (parentProp?.type === "relation" && parentProp.relation.length > 0) {
+      parentId = parentProp.relation[0].id;
+    } else {
+      parentId = null;
+    }
+  }
+
   const post: Post = {
     id: id,
     title,
@@ -211,6 +225,7 @@ export function buildPost(
         : "",
     images,
     additionalProperties: Object.keys(additionalPropsData).length > 0 ? additionalPropsData : undefined,
+    ...(parentId !== undefined ? { parentId } : {}),
   };
 
   return post;

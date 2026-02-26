@@ -11,6 +11,13 @@ import type {
   DatabaseFilterOptions,
   PostContent,
 } from "./interfaces";
+import {
+  type HierarchyOptions,
+  type HierarchyTree,
+  buildRelationTree,
+  buildSubpageTree,
+  buildBothTree,
+} from "./hierarchy.ts";
 import { Md2Html, type Md2HtmlOptions, UnifiedProcessor } from "./md2html.ts";
 import { transform, type MdTransformer } from "./md2md.ts";
 import { CacheClient, type MinimalNotionClient, getAll } from "./notion/index.ts";
@@ -37,8 +44,8 @@ export type Options = {
   properties?: PropertyNames;
   /** Additional property names to include in meta.json */
   additionalProperties?: string[];
-  /** Transform function for internal page links. Defaults to slug without extension. */
-  internalLink?: (post: Post) => string;
+  /** Transform function for internal page links. Defaults to slug without extension. fromPost is the page containing the link. */
+  internalLink?: (post: Post, fromPost?: Post) => string;
   /** Custom additional Notion markdown transformers */
   notionMdTransformers?: [BlockType, NotionMdTransformer][];
   /** Custom additional markdown transformers */
@@ -49,6 +56,8 @@ export type Options = {
   client?: MinimalNotionClient;
   /** Database filter options */
   filter?: DatabaseFilterOptions;
+  /** Hierarchy options for nested directory output */
+  hierarchy?: HierarchyOptions;
 };
 
 export class Client implements ClientType {
@@ -61,12 +70,13 @@ export class Client implements ClientType {
   assetUrlTransform?: (filename: string) => string;
   renderHtml?: boolean;
   debug = false;
-  properties: Required<PropertyNames>;
+  properties: Required<Omit<PropertyNames, 'parent'>> & Pick<PropertyNames, 'parent'>;
   additionalProperties: string[];
-  internalLink?: (post: Post) => string;
+  internalLink?: (post: Post, fromPost?: Post) => string;
   mdTransformers: MdTransformer[] = [];
   md2html: Md2Html;
   filter: DatabaseFilterOptions;
+  hierarchy?: HierarchyOptions;
 
   constructor(options: Options) {
     if (!options.dataSourceId) {
@@ -108,6 +118,17 @@ export class Client implements ClientType {
     this.internalLink = options.internalLink;
     this.mdTransformers = options.mdTransformers || [];
     this.filter = { ...options.filter };
+    this.hierarchy = options.hierarchy;
+
+    // Auto-add relation property to additionalProperties for hierarchy relation/both mode
+    if (this.hierarchy?.relationProperty) {
+      const relProp = this.hierarchy.relationProperty;
+      if (!this.additionalProperties.includes(relProp)) {
+        this.additionalProperties = [...this.additionalProperties, relProp];
+      }
+      // Also set the parent property name for buildPost
+      this.properties = { ...this.properties, parent: relProp };
+    }
 
     this.md2html = new Md2Html(options.md2html);
     this.n2m = newNotionToMarkdown(this.client);
@@ -210,6 +231,62 @@ export class Client implements ClientType {
     return posts;
   }
 
+  async getPostTree(): Promise<{
+    database: Database;
+    posts: Post[];
+    assets: Map<string, string>;
+    tree: HierarchyTree | null;
+  }> {
+    const { database, posts, assets } = await this.getDatabaseAndAllPosts();
+
+    if (!this.hierarchy) {
+      return { database, posts, assets, tree: null };
+    }
+
+    let tree: HierarchyTree;
+    switch (this.hierarchy.mode) {
+      case "relation":
+        if (!this.hierarchy.relationProperty) {
+          throw new Error("hierarchy.relationProperty is required for relation mode");
+        }
+        tree = buildRelationTree(posts, this.hierarchy.relationProperty);
+        break;
+      case "subpage":
+        tree = await buildSubpageTree(
+          posts,
+          this.client,
+          this.assetsDir,
+          this.properties,
+          this.additionalProperties,
+        );
+        break;
+      case "both":
+        if (!this.hierarchy.relationProperty) {
+          throw new Error("hierarchy.relationProperty is required for both mode");
+        }
+        tree = await buildBothTree(
+          posts,
+          this.hierarchy.relationProperty,
+          this.client,
+          this.assetsDir,
+          this.properties,
+          this.additionalProperties,
+        );
+        break;
+    }
+
+    // Collect assets from any new posts added by subpage scanning
+    for (const post of posts) {
+      if (post.images) {
+        for (const [url, assetUrl] of Object.entries(post.images)) {
+          assets.set(url, assetUrl);
+        }
+      }
+    }
+
+    return { database, posts, assets, tree };
+  }
+
   async getPostById(pageId: string): Promise<Post | null> {
     try {
       const page = await this.client.pages.retrieve({ page_id: pageId });
@@ -236,6 +313,7 @@ export class Client implements ClientType {
       assetsDir: this.assetsDir,
       assetUrlTransform: this.assetUrlTransform,
       internalLink: this.internalLink,
+      fromPostId: postId,
       transformers: this.mdTransformers,
     });
 

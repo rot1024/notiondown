@@ -68,7 +68,7 @@ Options:
                                        Requires ffmpeg to be installed separately.
   --asset-base-url <url>               base URL for assets (e.g. https://cdn.example.com/assets/)
   --internal-link-template <template>  internal link template using ${id}, ${slug}, ${date}, ${year}, ${month}, ${day} (e.g. https://example.com/posts/${slug})
-  --filename-template <template>       filename template using ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext})
+  --filename-template <template>       filename template using ${dir}, ${id}, ${slug}, ${ext}, ${date}, ${year}, ${month}, ${day} (default: ${slug}.${ext}). ${dir} is auto-prepended when hierarchy mode is enabled.
   --properties <mapping>               Notion property name mappings in key=value format (e.g. slug=Slug,date=Date). Note: title is auto-detected)
   --additional-properties <properties> additional Notion properties to include in meta.json (comma-separated, e.g. author,status,category)
   --shiki-theme <theme>                Shiki theme for code syntax highlighting (e.g. github-light, monokai, nord) (default: github-dark)
@@ -82,6 +82,10 @@ Options:
   --tags <tags>                        filter posts with specified tags (comma-separated, OR condition)
   --tags-all <tags>                    filter posts with all specified tags (comma-separated, AND condition)
   --exclude-tags <tags>                exclude posts with specified tags (comma-separated)
+
+  Hierarchy Options:
+  --hierarchy-mode <mode>              hierarchy mode: relation, subpage, or both
+  --hierarchy-relation <property>      relation property name for hierarchy (required for relation/both mode)
 
   -h, --help                           display help for command
 ```
@@ -204,6 +208,14 @@ type Options = {
   client?: MinimalNotionClient;
   /** Database filter options */
   filter?: DatabaseFilterOptions;
+  /** Hierarchy options for nested directory output */
+  hierarchy?: HierarchyOptions;
+};
+
+type HierarchyOptions = {
+  mode: "relation" | "subpage" | "both";
+  /** Relation property name (required for relation/both mode) */
+  relationProperty?: string;
 };
 
 type DatabaseFilterOptions = {
@@ -280,6 +292,15 @@ npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --optimize-videos "al
 # Customize Shiki theme for syntax highlighting
 npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --shiki-theme "github-light"
 npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --shiki-theme "monokai"
+
+# Hierarchy mode: output nested directories using a self-referencing relation property
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --hierarchy-mode relation --hierarchy-relation "Parent"
+
+# Hierarchy mode: discover child pages (Notion subpages) and nest them
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --hierarchy-mode subpage
+
+# Hierarchy mode: combine relation + subpage
+npx notiondown --auth API_KEY --data-source DATA_SOURCE_ID --hierarchy-mode both --hierarchy-relation "Parent"
 ```
 
 ### Library Examples
@@ -354,4 +375,58 @@ const clientWithCustomTheme = new Client({
     shikiTheme: "github-light" // or "monokai", "nord", "dracula", etc.
   }
 });
+
+// Hierarchy mode: nested directory output using relation property
+const hierarchyClient = new Client({
+  auth: "NOTION_API_KEY",
+  dataSourceId: "DATA_SOURCE_ID",
+  cacheDir: "cache",
+  hierarchy: {
+    mode: "relation",
+    relationProperty: "Parent"
+  }
+});
+
+// Use getPostTree() to get posts with hierarchy info
+const { database, posts, assets, tree } = await hierarchyClient.getPostTree();
+// tree.roots contains root-level HierarchyNodes
+// tree.nodeMap maps post IDs to their HierarchyNode
+// Each post has parentId, pathSegments, and childIds populated
 ```
+
+## Hierarchy Mode
+
+Hierarchy mode enables nested directory output, organizing pages into subdirectories based on parent-child relationships.
+
+### Modes
+
+| Mode | Description |
+|---|---|
+| `relation` | Uses a self-referencing relation property (e.g., "Parent") in the same database to define parent-child relationships |
+| `subpage` | Discovers Notion child pages (subpages nested within a page) |
+| `both` | Combines relation + subpage: first builds the tree from relations, then scans each page for subpages |
+
+### Notion Setup (Relation Mode)
+
+1. Add a **Relation** property to your database (e.g., name it "Parent")
+2. Configure it as a **self-referencing relation** (relates to the same database)
+3. For each child page, select its parent page in the "Parent" property
+
+### Output Structure
+
+```
+dist/
+├── meta.json
+├── blog-post.md              ← Root page without children (flat)
+├── guide/
+│   ├── index.md              ← Root page with children (becomes index)
+│   ├── getting-started.md    ← Child page (leaf)
+│   └── advanced/
+│       ├── index.md          ← Intermediate page with children
+│       └── tips.md           ← Grandchild page (leaf)
+└── assets/                   ← Assets remain flat
+```
+
+### Template Variable
+
+The `${dir}` template variable is available in `--filename-template` for hierarchy paths. When hierarchy mode is enabled and the template doesn't include `${dir}`, it is automatically prepended.
