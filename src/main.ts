@@ -393,6 +393,49 @@ export async function main(opts: MainOptions) {
   console.log("Done!");
 }
 
+function formatAdditionalProperty(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  // select / status: {id, name, color} → name
+  if (typeof value === "object" && !Array.isArray(value) && "name" in (value as Record<string, unknown>)) {
+    const obj = value as Record<string, unknown>;
+    // date: {start, end} → start
+    if ("start" in obj) {
+      return obj.start as string;
+    }
+    return obj.name;
+  }
+  // arrays: multi_select/people, relation, files
+  if (Array.isArray(value)) {
+    return value.map(item => {
+      if (typeof item === "object" && item !== null) {
+        // files: {type, url, name} → url
+        if ("url" in item) {
+          return (item as Record<string, unknown>).url;
+        }
+        // multi_select / people: {id, name, ...} → name
+        if ("name" in item) {
+          return (item as Record<string, unknown>).name;
+        }
+        // relation: {id} → id
+        if ("id" in item) {
+          return (item as Record<string, unknown>).id;
+        }
+      }
+      return item;
+    });
+  }
+  // date: {start, end} (without name)
+  if (typeof value === "object" && "start" in (value as Record<string, unknown>)) {
+    return (value as Record<string, unknown>).start as string;
+  }
+  return value;
+}
+
 function generateFrontmatter(post: Post): string {
   const frontmatter: Record<string, any> = {
     title: post.title,
@@ -427,6 +470,16 @@ function generateFrontmatter(post: Post): string {
     frontmatter.featuredImage = post.featuredImage;
   }
 
+  // Add additional properties
+  if (post.additionalProperties) {
+    for (const [key, value] of Object.entries(post.additionalProperties)) {
+      const formatted = formatAdditionalProperty(value);
+      if (formatted !== undefined) {
+        frontmatter[key] = formatted;
+      }
+    }
+  }
+
   // Convert to YAML frontmatter
   const yamlLines = Object.entries(frontmatter)
     .filter(([_, value]) => value !== undefined && value !== null && value !== "")
@@ -438,7 +491,12 @@ function generateFrontmatter(post: Post): string {
         return `${key}:\n${value.map(item => `  - "${item}"`).join('\n')}`;
       }
       if (typeof value === 'string') {
-        // Escape quotes and handle multiline strings
+        if (value.includes('\n')) {
+          // Use YAML literal block scalar for multiline strings
+          const indented = value.split('\n').map(line => `  ${line}`).join('\n');
+          return `${key}: |\n${indented}`;
+        }
+        // Escape quotes for single-line strings
         const escapedValue = value.replace(/"/g, '\\"');
         return `${key}: "${escapedValue}"`;
       }
@@ -480,6 +538,16 @@ function generateHtmlMetadata(post: Post): string {
   }
   if (post.featuredImage) {
     metadata.featuredImage = post.featuredImage;
+  }
+
+  // Add additional properties
+  if (post.additionalProperties) {
+    for (const [key, value] of Object.entries(post.additionalProperties)) {
+      const formatted = formatAdditionalProperty(value);
+      if (formatted !== undefined) {
+        metadata[key] = formatted;
+      }
+    }
   }
 
   // Convert to JSON and embed in HTML comment
