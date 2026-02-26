@@ -1,0 +1,94 @@
+name: 'notiondown'
+description: 'Convert Notion databases to markdown/HTML using the notiondown CLI'
+author: 'rot1024'
+
+branding:
+  icon: 'file-text'
+  color: 'blue'
+
+inputs:
+  auth:
+    description: 'Notion API key'
+    required: true
+  data-source:
+    description: 'Notion data source ID (database ID)'
+    required: true
+  args:
+    description: >
+      Additional CLI arguments passed directly to notiondown.
+      Example: '--output dist --format md --frontmatter --only-published'
+    required: false
+    default: ''
+  version:
+    description: 'notiondown version to install (e.g., "0.4.0", "latest")'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+  cache:
+    description: 'Enable caching of Notion API responses across runs using actions/cache'
+    required: false
+    default: 'true'
+  cache-dir:
+    description: 'Cache directory path (must match --cache-dir in args if specified)'
+    required: false
+    default: 'cache'
+
+outputs:
+  output-dir:
+    description: 'Path to the output directory containing generated files'
+    value: ${{ steps.resolve-output.outputs.output-dir }}
+  meta-json:
+    description: 'Path to the generated meta.json file'
+    value: ${{ steps.resolve-output.outputs.meta-json }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Restore notiondown cache
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.cache-dir }}
+        key: notiondown-cache-${{ inputs.data-source }}
+
+    - name: Run notiondown
+      shell: bash
+      env:
+        NOTIONDOWN_AUTH: ${{ inputs.auth }}
+        NOTIONDOWN_DATA_SOURCE: ${{ inputs.data-source }}
+        NOTIONDOWN_ARGS: ${{ inputs.args }}
+        NOTIONDOWN_VERSION: ${{ inputs.version }}
+        NOTIONDOWN_CACHE_DIR: ${{ inputs.cache-dir }}
+      run: |
+        if [ -n "$NOTIONDOWN_VERSION" ]; then
+          PKG="notiondown@${NOTIONDOWN_VERSION}"
+        else
+          PKG="notiondown"
+        fi
+
+        npx --yes "$PKG" \
+          --auth "$NOTIONDOWN_AUTH" \
+          --data-source "$NOTIONDOWN_DATA_SOURCE" \
+          --cache-dir "$NOTIONDOWN_CACHE_DIR" \
+          $NOTIONDOWN_ARGS
+
+    - name: Resolve output directory
+      id: resolve-output
+      shell: bash
+      env:
+        NOTIONDOWN_ARGS: ${{ inputs.args }}
+      run: |
+        OUTPUT_DIR="dist"
+        if [[ "$NOTIONDOWN_ARGS" =~ --output[[:space:]]+([^[:space:]]+) ]]; then
+          OUTPUT_DIR="${BASH_REMATCH[1]}"
+        fi
+        echo "output-dir=${OUTPUT_DIR}" >> "$GITHUB_OUTPUT"
+        echo "meta-json=${OUTPUT_DIR}/meta.json" >> "$GITHUB_OUTPUT"

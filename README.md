@@ -238,6 +238,81 @@ type DatabaseFilterOptions = {
 };
 ```
 
+## GitHub Actions
+
+notiondown can be used as a GitHub Action. Only `auth` and `data-source` are required inputs; all other CLI options can be passed via `args`. See [ACTION.md](ACTION.md) for full documentation and examples.
+
+```yaml
+- uses: rot1024/notiondown@latest
+  with:
+    auth: ${{ secrets.NOTION_API_KEY }}
+    data-source: ${{ secrets.NOTION_DATABASE_ID }}
+    args: >-
+      --output content
+      --format md
+      --frontmatter
+      --only-published
+```
+
+### Action Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `auth` | Yes | | Notion API key |
+| `data-source` | Yes | | Notion data source ID (database ID) |
+| `args` | No | `''` | Additional CLI arguments (e.g. `--format md --frontmatter`) |
+| `version` | No | `''` | notiondown version (e.g. `0.4.0`). Defaults to latest |
+| `node-version` | No | `'20'` | Node.js version |
+| `cache` | No | `'true'` | Cache Notion API responses across runs using actions/cache |
+| `cache-dir` | No | `'cache'` | Cache directory path (must match `--cache-dir` in args if specified) |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `output-dir` | Path to the output directory |
+| `meta-json` | Path to the generated `meta.json` file |
+
+### Full Workflow Example
+
+```yaml
+name: Sync Notion Content
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Convert Notion to Markdown
+        id: notiondown
+        uses: rot1024/notiondown@latest
+        with:
+          auth: ${{ secrets.NOTION_API_KEY }}
+          data-source: ${{ secrets.NOTION_DATABASE_ID }}
+          args: >-
+            --output content
+            --format md
+            --frontmatter
+            --only-published
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: notion-content
+          path: ${{ steps.notiondown.outputs.output-dir }}
+```
+
+### Notes
+
+- To use `--optimize-videos`, install ffmpeg in a prior step
+- Template variables like `${slug}` in args must be single-quoted to avoid shell expansion (e.g. `--internal-link-template '/posts/${slug}'`)
+- To disable caching, set `cache: 'false'`
+
 ## Examples
 
 ### CLI Examples
