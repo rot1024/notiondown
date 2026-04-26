@@ -61,7 +61,6 @@
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
-    "sharp": "^0.34.4",
     "shiki": "^3.14.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0"
@@ -70,9 +69,13 @@
     "@types/async-retry": "^1.4.9",
     "@types/is-url": "^1.2.32",
     "@types/node": "^24.10.0",
+    "sharp": "^0.34.4",
     "tsup": "^8.5.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.7"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.34.4"
   }
 }

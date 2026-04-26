@@ -2,9 +2,20 @@ import fs from "node:fs";
 import { basename, extname, join } from "node:path";
 
 import { PromisePool } from "@supercharge/promise-pool";
-import sharp from "sharp";
 import { type Client } from "./interfaces";
 import { isVideoFile, optimizeVideo, shouldOptimizeVideo } from "./video";
+
+type SharpModule = typeof import("sharp");
+let sharpModulePromise: Promise<SharpModule | null> | undefined;
+
+async function loadSharp(): Promise<SharpModule | null> {
+  if (!sharpModulePromise) {
+    sharpModulePromise = import("sharp")
+      .then((mod) => (mod.default ?? mod) as SharpModule)
+      .catch(() => null);
+  }
+  return sharpModulePromise;
+}
 
 /**
  * Downloads assets (images, videos, audio) from a map of URLs to local paths.
@@ -84,23 +95,34 @@ export async function downloadAssets(
 
       // Handle image optimization
       if (optimizeImages && isRasterImage) {
-        try {
-          const optimized = await sharp(body).rotate().webp().toBuffer();
+        const sharp = await loadSharp();
+        if (!sharp) {
           if (debug) {
-            console.log(
-              "notiondown: asset: optimized image",
-              localDest,
-              `${body.byteLength} bytes -> ${optimized.length} bytes`,
-              `(${Math.floor((optimized.length / body.byteLength) * 100)}%)`,
+            console.warn(
+              `notiondown: asset: sharp is not installed, saving original for ${localDest}. ` +
+              `Install \`sharp\` to enable image optimization.`,
             );
           }
-          await onSave(assetUrl, localDest, optimized, true);
-        } catch (error) {
-          // If Sharp fails (e.g., unsupported format despite extension), save original
-          if (debug) {
-            console.warn(`notiondown: asset: image optimization failed for ${localDest}, saving original:`, error instanceof Error ? error.message : error);
-          }
           await onSave(assetUrl, localDest, buf, false);
+        } else {
+          try {
+            const optimized = await sharp(body).rotate().webp().toBuffer();
+            if (debug) {
+              console.log(
+                "notiondown: asset: optimized image",
+                localDest,
+                `${body.byteLength} bytes -> ${optimized.length} bytes`,
+                `(${Math.floor((optimized.length / body.byteLength) * 100)}%)`,
+              );
+            }
+            await onSave(assetUrl, localDest, optimized, true);
+          } catch (error) {
+            // If Sharp fails (e.g., unsupported format despite extension), save original
+            if (debug) {
+              console.warn(`notiondown: asset: image optimization failed for ${localDest}, saving original:`, error instanceof Error ? error.message : error);
+            }
+            await onSave(assetUrl, localDest, buf, false);
+          }
         }
       }
       // Handle video optimization
